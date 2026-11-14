@@ -158,3 +158,62 @@ test('ndviQA: drops cloudy/snow/fill readings, keeps unflagged ones, sorts by da
   assert.deepEqual(out.map(o => o.v), [null, 0.45, 0.5, 0.6, null, null]);
   assert.equal(out.dropped, 3);
 });
+
+// ---------- climate pattern statistics ----------
+test('normCdf / normInv: known values and round trip', () => {
+  near(F.normCdf(0), 0.5, 1e-7);
+  near(F.normCdf(1.959964), 0.975, 1e-6);
+  near(F.normInv(0.975), 1.959964, 1e-5);
+  // normCdf is accurate to ~1.5e-7 absolute, so deep in the tail the round trip loosens a little.
+  for (const z of [-3, -1.5, -0.2, 0.7, 2.4]) near(F.normInv(F.normCdf(z)), z, 1e-4);
+});
+
+test('gammaP: matches closed forms', () => {
+  for (const x of [0.1, 1, 3, 8]) near(F.gammaP(1, x), 1 - Math.exp(-x), 1e-9);                 // exponential
+  for (const x of [0.5, 2, 6]) near(F.gammaP(2, x), 1 - Math.exp(-x) * (1 + x), 1e-9);        // Erlang k=2
+});
+
+test('mannKendall: perfect trend, no trend, Sen slope, ties', () => {
+  const xs = Array.from({ length: 12 }, (_, i) => 2001 + i);
+  const up = F.mannKendall(xs, xs.map(x => 2 * x + 1));
+  assert.equal(up.S, 66); assert.equal(up.tau, 1); near(up.sen, 2); assert.ok(up.p < 0.001);
+  const down = F.mannKendall(xs, xs.map(x => -x));
+  assert.equal(down.S, -66); assert.ok(down.p < 0.001);
+  const flat = F.mannKendall(xs, xs.map(() => 5));
+  assert.equal(flat.S, 0); near(flat.p, 1, 1e-6); assert.equal(flat.sen, 0);
+  // Alternating series: no trend.
+  assert.ok(F.mannKendall(xs, xs.map((x, i) => i % 2 ? 10 : 0)).p > 0.5);
+  // Missing values are skipped; fewer than 8 points gives no result.
+  assert.equal(F.mannKendall(xs.slice(0, 7), xs.slice(0, 7)), null);
+  assert.equal(F.mannKendall(xs, xs.map((x, i) => i < 5 ? null : x)), null);
+});
+
+test('mannKendall: textbook example (n=10, S=+27 with no ties)', () => {
+  // Hand-checked: S = 27, Var(S) = 10*9*25/18 = 125, z = 26/sqrt(125) = 2.3255, p = 0.0200.
+  const ys = [1, 3, 2, 5, 4, 6, 8, 7, 10, 9].map((v, i) => i === 0 ? 1 : v);
+  const r = F.mannKendall(ys.map((_, i) => i), [3, 1, 4, 2, 6, 5, 9, 7, 8, 10]);
+  let S = 0; const v = [3, 1, 4, 2, 6, 5, 9, 7, 8, 10];
+  for (let a = 0; a < 9; a++) for (let b = a + 1; b < 10; b++) S += Math.sign(v[b] - v[a]);
+  assert.equal(r.S, S);
+  near(r.z, (S - 1) / Math.sqrt(125), 1e-12);
+  near(r.p, 2 * (1 - F.normCdf(Math.abs(r.z))), 1e-12);
+});
+
+test('spi: centred on zero, increases with rainfall, flags the driest year', () => {
+  const rain = [420, 380, 510, 300, 450, 470, 360, 600, 410, 390, 440, 520, 330, 480, 400];
+  const z = F.spi(rain);
+  near(z.reduce((s, v) => s + v, 0) / z.length, 0, 0.15);
+  const order = rain.map((r, i) => [r, z[i]]).sort((a, b) => a[0] - b[0]);
+  for (let i = 1; i < order.length; i++) assert.ok(order[i][1] > order[i - 1][1]);
+  assert.ok(z[rain.indexOf(300)] < -1, 'driest year should be at least moderately dry');
+  assert.ok(z[rain.indexOf(600)] > 1, 'wettest year should be at least moderately wet');
+});
+
+test('waterYearRain: October-September totals', () => {
+  const d = F.parsePower(F.synthPower(37.87));
+  const wy = F.waterYearRain(d);
+  assert.equal(wy[0][0], d._years[1]);
+  const y = wy[0][0], P = d.PRECTOTCORR;
+  let tot = 0; for (let m = 9; m < 12; m++) tot += P[y - 1][m] * F.MD[m]; for (let m = 0; m < 9; m++) tot += P[y][m] * F.MD[m];
+  near(wy[0][1], tot, 1e-9);
+});

@@ -45,6 +45,19 @@ Sonuç: sulu Harran'da pamuk uygunluğu 26 → 74/100, mısır 29 → 56/100. De
 
 **Hâlâ açık:** Yeni sıcaklık eşikleri ve pamuk takvimi tek bir bölgeye bakılarak ayarlandı; uzman doğrulaması gerekir. Mısırın sıcakta tozlanma riski bu eşiklerle hafife alınmış olabilir. MODIS yeşillik verisi artık dört bölge için de var (her biri 115 tarih, 110–115'i kalite süzgecinden geçiyor). Hiçbir bölgede yeşillik düşüş eğilimi bulunmadığı için planlar ve puanlar değişmedi; `tests/regions.golden.json` kaydı aynı kaldı.
 
+## İklim örüntüsü: dört bölge (2001–2025, NASA POWER)
+
+Mann-Kendall testi + Sen eğimi (10 yılda değişim) ve tarım yılı (ekim–eylül) SPI-12. **Kalın** değerler p < 0,05.
+
+| Bölge | Yıllık sıcaklık | Yaz en yüksek | Kış en düşük | Yıllık yağış | Kök nemi | Kurak yıllar (SPI ≤ −1) | 2002–13 / 2014–25 |
+|---|---:|---:|---:|---:|---:|---|---:|
+| Konya | **+0,6 °C** | +0,4 °C | +0,6 °C | −51 mm | **−0,023** | 2014, 2016, 2021, 2025 | 0 / 4 |
+| Çukurova | **+0,7 °C** | +0,5 °C | +0,6 °C | −34 mm | −0,011 | 2014, 2021, 2023, 2025 | 0 / 4 |
+| Harran | **+0,7 °C** | **+0,7 °C** | **+0,6 °C** | +22 mm | +0,003 | 2007, 2008, 2009, 2025 | 3 / 1 |
+| Trakya | **+0,8 °C** | **+0,7 °C** | **+1,2 °C** | −27 mm | −0,012 | 2007, 2020, 2023, 2025 | 1 / 3 |
+
+Doğrulama: Harran'daki 2007–2009 kurak yılları, Güneydoğu Anadolu ve Kuzey Suriye'de belgelenmiş 2007–2009 kuraklığıyla örtüşüyor; `tests/regions.cjs` bunu ve dört bölgede ısınmanın anlamlı çıkmasını kontrol eder. Sınırlar: yıllar arası öz-ilişki düzeltilmedi (p değerleri biraz iyimser olabilir); 25 yıl ve ~50 km ızgara verisidir; kurak yıl sayılarının iki yarı arasında karşılaştırması betimleyicidir, istatistik testi değildir.
+
 ## Gerçek tarla pilotu kayıt şablonu — henüz tamamlanmadı
 
 - Challenge başlığı ve bağlantısı: doldurulacak.

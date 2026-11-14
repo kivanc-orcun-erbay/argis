@@ -99,3 +99,22 @@ test('no console errors through the main flow', async ({ page }) => {
   await expect(page.locator('#status')).toContainText('Plan hazır');
   expect(errors).toEqual([]);
 });
+
+test('climate pattern section: significant warming, Harran 2007-2009 drought, p-values only in engineer view', async ({ page }) => {
+  await expect(page.locator('#patternBand')).toBeVisible();
+  await expect(page.locator('#patTitle')).toContainText('Isınma belirgin');
+  await expect(page.locator('#patTrends li')).toHaveCount(6);
+  await expect(page.locator('#patLead')).toContainText('gelecek tahmini değildir');
+  await page.locator('.pbtn[data-snap="harran"]').click();
+  await expect(page.locator('#patSpiText')).toContainText('2007, 2008, 2009');
+  await expect(page.locator('#patSpi .yb.dry')).toHaveCount(4);
+  await expect(page.locator('#patSpi')).toHaveAttribute('aria-label', /Kurak yıllar: 2007, 2008, 2009/);
+  await page.locator('#vFarm').click();
+  await expect(page.locator('#patTrends .raw').first()).toBeHidden();
+  await page.locator('#vEng').click();
+  await expect(page.locator('#patTrends .raw').first()).toContainText('p = ');
+  // History is not changed by the scenario toggle.
+  const before = await page.locator('#patTitle').innerText();
+  await page.locator('label[for="hot"]').click();
+  await expect(page.locator('#patTitle')).toHaveText(before);
+});

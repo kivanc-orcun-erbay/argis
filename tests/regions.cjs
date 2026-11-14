@@ -57,6 +57,19 @@ check(S('cukurova/sulu', 'pamuk') >= 60, `cukurova/sulu: cotton suitability ${S(
 check(S('konya/kıraç', 'bugday') >= 60, `konya/kıraç: wheat suitability ${S('konya/kıraç', 'bugday')} < 60`);
 check(S('trakya/kıraç', 'bugday') >= 60, `trakya/kıraç: wheat suitability ${S('trakya/kıraç', 'bugday')} < 60`);
 
+// Climate patterns on the real data (see FS.patterns): known facts the statistics must reproduce.
+for (const [k, sn] of Object.entries(snap)) {
+  const P = F.patterns(F.parsePower(F.snapPower(sn)));
+  const t = P.series.find(x => x.key === 'temp').mk;
+  check(t && t.sen > 0 && t.p < 0.05, `${k}: warming trend not detected (Sen ${t && t.sen}, p ${t && t.p})`);
+  check(P.spi.values.filter(v => v != null).length >= 20, `${k}: fewer than 20 SPI years`);
+}
+{ // The 2007-2009 drought in south-eastern Turkey / northern Syria must show in Harran.
+  const P = F.patterns(F.parsePower(F.snapPower(snap.harran)));
+  const hits = [2007, 2008, 2009].filter(y => P.spi.dryYears.includes(y));
+  check(hits.length >= 2, `harran: 2007-2009 drought not found (dry years: ${P.spi.dryYears.join(', ')})`);
+}
+
 console.table(rows);
 
 // --- saved record ---

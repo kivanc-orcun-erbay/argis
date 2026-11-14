@@ -219,6 +219,21 @@ input[type=range]{width:100%;accent-color:var(--accent)}
 .shiftline s{color:var(--ink-3);text-decoration-thickness:1px}
 .tag{display:inline-block;margin-left:6px;padding:0 6px;border-radius:var(--r-xs);background:var(--surface-2);color:var(--ink-3);font-size:11px;font-weight:600;line-height:18px;white-space:nowrap;vertical-align:1px}
 .yr__src{font-size:var(--f-xs);color:var(--ink-3);line-height:1.35}
+.pat-grid{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.1fr);gap:var(--s4)}
+.trend-list{margin:0;padding:0;list-style:none;display:flex;flex-direction:column}
+.trend-list li{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:2px var(--s3);padding:var(--s2) 0;border-top:1px solid var(--line);align-items:center}
+.trend-list li:first-child{border-top:0}
+.trend-list .tv{font-weight:700;font-variant-numeric:tabular-nums;text-align:right;white-space:nowrap}
+.trend-list .tn{font-size:var(--f-sm)}
+.trend-list .ts{grid-column:1 / -1;display:flex;gap:var(--s2);align-items:center;flex-wrap:wrap}
+.spi{position:relative;display:grid;grid-auto-flow:column;grid-auto-columns:minmax(0,1fr);gap:2px;height:150px;margin:var(--s3) 0 var(--s1)}
+.spi::before{content:"";position:absolute;left:0;right:0;top:50%;border-top:1px solid var(--line-strong)}
+.spi .yb{position:relative}
+.spi .yb i{position:absolute;left:0;right:0;border-radius:2px;background:var(--line-strong)}
+.spi .yb.dry i{background:var(--bad)} .spi .yb.wet i{background:var(--rain)}
+.spi .yb b{position:absolute;bottom:-18px;left:50%;transform:translateX(-50%);font-size:10px;font-weight:600;color:var(--ink-3);white-space:nowrap}
+.spi-key{display:flex;flex-wrap:wrap;gap:var(--s3);margin:var(--s5) 0 var(--s2)}
+@media (max-width:900px){.pat-grid{grid-template-columns:1fr}}
 .alts-h{margin:var(--s7) 0 var(--s4);font-size:var(--f-md)}
 .alt__seq{font-size:var(--f-lg);font-weight:800;line-height:1.3}
 .alt .why{margin-top:var(--s2)}
@@ -508,6 +523,27 @@ td .sub{font-size:var(--f-xs);color:var(--ink-3)}
   <div class="grid4" id="farmCards"></div>
 </section>
 
+<section class="band" id="patternBand" hidden>
+  <header>
+    <p class="eyebrow" id="patEyebrow">İklim örüntüsü · NASA POWER</p>
+    <h2 id="patTitle"></h2>
+    <p class="lead" id="patLead"></p>
+  </header>
+  <div class="pat-grid">
+    <div class="card">
+      <div class="card__t">Uzun dönem eğilimler <span class="muted">(10 yılda değişim)</span></div>
+      <ul class="trend-list" id="patTrends"></ul>
+    </div>
+    <div class="card">
+      <div class="card__t">Kurak ve yağışlı yıllar <span class="muted">(tarım yılı ekim–eylül, SPI-12)</span></div>
+      <div class="spi" id="patSpi" role="img"></div>
+      <div class="spi-key"><span class="key"><i style="background:var(--bad)"></i>kurak (SPI ≤ −1)</span><span class="key"><i style="background:var(--line-strong)"></i>normal</span><span class="key"><i style="background:var(--rain)"></i>yağışlı (SPI ≥ 1)</span></div>
+      <p class="sm" id="patSpiText"></p>
+    </div>
+  </div>
+  <p class="foot eng-only">Yöntem: eğilimler Mann-Kendall testi (iki yönlü, eşit değer düzeltmeli) ve Sen eğimiyle; p &lt; 0,05 “belirgin”, p &lt; 0,10 “zayıf işaret” sayılır. Yıllar arası öz-ilişki düzeltilmedi; bu yüzden p değerleri biraz iyimser olabilir. SPI-12, tarım yılı yağış toplamlarına gama dağılımı uydurularak (Thom tahmincisi) hesaplanır; ≤ −1 orta, ≤ −1,5 şiddetli kuraklıktır. Veri: NASA POWER (~50 km ızgara), 2001–2025.</p>
+</section>
+
 <section class="band" id="shiftBand" hidden>
   <header>
     <p class="eyebrow" id="shiftEyebrow">20 yıl önceki iklim ile bugün</p>
@@ -572,6 +608,7 @@ td .sub{font-size:var(--f-xs);color:var(--ink-3)}
       <li><b>Su:</b> sulama ihtiyacı = sezon su ihtiyacı − (sezon yağışı + depolanan toprak suyu). 1 mm = 1 m³/da; 1 salma ≈ 70 mm.</li>
       <li><b>Gübre:</b> bakliyat sonrası 3–5 kg N/da azot kredisi (≈ 6,5–11 kg üre/da) varsayılır; yukarıdan değiştirilebilir.</li>
       <li><b>Karşılaştırma:</b> kıraçta buğday–nadas; sulu tarlada önceki ürün ile buğdayın dönüşümlü ekimi.</li>
+      <li><b>İklim örüntüsü:</b> 6 iklim serisinde Mann-Kendall eğilim testi ve Sen eğimi; tarım yılı yağışından SPI-12 ile kurak / yağışlı yıllar. Geçmiş ölçümlerdir; plana doğrudan girmez, senaryo düğmelerinden etkilenmez.</li>
     </ul>
     <h3>Kanıt ve varsayımlar</h3>
     <p>Bu sürüm bir araştırma prototipidir. Çiftçi pilotu, uzman onayı ve ölçülmüş verim / tasarruf sonucu henüz yoktur.</p>
@@ -916,6 +953,122 @@ var FS = (function () {
   }
 
 
+  // ---------- Climate patterns: is a trend real, and are dry years getting more frequent? ----------
+  // Standard normal CDF (Abramowitz & Stegun 7.1.26, error < 1.5e-7).
+  function normCdf(z) {
+    var t = 1 / (1 + 0.3275911 * Math.abs(z) / Math.SQRT2);
+    var e = 1 - (((((1.061405429 * t - 1.453152027) * t) + 1.421413741) * t - 0.284496736) * t + 0.254829592) * t * Math.exp(-z * z / 2);
+    return z >= 0 ? (1 + e) / 2 : (1 - e) / 2;
+  }
+  // Inverse standard normal CDF (Acklam's rational approximation, rel. error < 1.2e-9).
+  function normInv(p) {
+    var a = [-39.69683028665376, 220.9460984245205, -275.9285104469687, 138.3577518672690, -30.66479806614716, 2.506628277459239];
+    var b = [-54.47609879822406, 161.5858368580409, -155.6989798598866, 66.80131188771972, -13.28068155288572];
+    var c = [-0.007784894002430293, -0.3223964580411365, -2.400758277161838, -2.549732539343734, 4.374664141464968, 2.938163982698783];
+    var d = [0.007784695709041462, 0.3224671290700398, 2.445134137142996, 3.754408661907416];
+    var q, r, pl = 0.02425;
+    if (p <= 0) return -Infinity; if (p >= 1) return Infinity;
+    if (p < pl) { q = Math.sqrt(-2 * Math.log(p)); return (((((c[0] * q + c[1]) * q + c[2]) * q + c[3]) * q + c[4]) * q + c[5]) / ((((d[0] * q + d[1]) * q + d[2]) * q + d[3]) * q + 1); }
+    if (p > 1 - pl) { q = Math.sqrt(-2 * Math.log(1 - p)); return -(((((c[0] * q + c[1]) * q + c[2]) * q + c[3]) * q + c[4]) * q + c[5]) / ((((d[0] * q + d[1]) * q + d[2]) * q + d[3]) * q + 1); }
+    q = p - 0.5; r = q * q;
+    return (((((a[0] * r + a[1]) * r + a[2]) * r + a[3]) * r + a[4]) * r + a[5]) * q / (((((b[0] * r + b[1]) * r + b[2]) * r + b[3]) * r + b[4]) * r + 1);
+  }
+  function lnGamma(x) { // Lanczos
+    var g = [76.18009172947146, -86.50532032941677, 24.01409824083091, -1.231739572450155, 0.1208650973866179e-2, -0.5395239384953e-5];
+    var y = x, t = x + 5.5, ser = 1.000000000190015;
+    t -= (x + 0.5) * Math.log(t);
+    for (var j = 0; j < 6; j++) ser += g[j] / ++y;
+    return -t + Math.log(2.5066282746310005 * ser / x);
+  }
+  // Regularized lower incomplete gamma P(a, x) (series / continued fraction, Numerical Recipes).
+  function gammaP(a, x) {
+    if (x <= 0) return 0;
+    var gln = lnGamma(a), n, del, sum, ap;
+    if (x < a + 1) {
+      ap = a; del = sum = 1 / a;
+      for (n = 0; n < 200; n++) { ap++; del *= x / ap; sum += del; if (Math.abs(del) < Math.abs(sum) * 1e-12) break; }
+      return sum * Math.exp(-x + a * Math.log(x) - gln);
+    }
+    var b = x + 1 - a, c = 1e300, dd = 1 / b, h = dd, an;
+    for (n = 1; n < 200; n++) {
+      an = -n * (n - a); b += 2; dd = an * dd + b; if (Math.abs(dd) < 1e-300) dd = 1e-300;
+      c = b + an / c; if (Math.abs(c) < 1e-300) c = 1e-300; dd = 1 / dd; del = dd * c; h *= del;
+      if (Math.abs(del - 1) < 1e-12) break;
+    }
+    return 1 - Math.exp(-x + a * Math.log(x) - gln) * h;
+  }
+  // Mann-Kendall trend test (two-sided, tie-corrected) + Sen's slope (per year).
+  // Assumes independent years; autocorrelation is not corrected (stated in the method notes).
+  function mannKendall(xs, ys) {
+    var pts = [];
+    for (var i = 0; i < ys.length; i++) if (ys[i] != null && !isNaN(ys[i])) pts.push([xs[i], ys[i]]);
+    var n = pts.length;
+    if (n < 8) return null;
+    var S = 0, slopes = [];
+    for (var a = 0; a < n - 1; a++) for (var b = a + 1; b < n; b++) {
+      var dy = pts[b][1] - pts[a][1];
+      S += dy > 0 ? 1 : dy < 0 ? -1 : 0;
+      if (pts[b][0] !== pts[a][0]) slopes.push(dy / (pts[b][0] - pts[a][0]));
+    }
+    var groups = {}; pts.forEach(function (p) { var k = p[1].toFixed(6); groups[k] = (groups[k] || 0) + 1; });
+    var tie = 0; Object.keys(groups).forEach(function (k) { var t = groups[k]; tie += t * (t - 1) * (2 * t + 5); });
+    var v = (n * (n - 1) * (2 * n + 5) - tie) / 18;
+    var z = S > 0 ? (S - 1) / Math.sqrt(v) : S < 0 ? (S + 1) / Math.sqrt(v) : 0;
+    slopes.sort(function (p, q) { return p - q; });
+    var m = slopes.length, sen = m ? (m % 2 ? slopes[(m - 1) / 2] : (slopes[m / 2 - 1] + slopes[m / 2]) / 2) : 0;
+    return { n: n, S: S, z: z, p: 2 * (1 - normCdf(Math.abs(z))), sen: sen, tau: S / (n * (n - 1) / 2) };
+  }
+  // SPI on totals: gamma fit (Thom's estimator), zeros handled by mixed distribution.
+  function spi(values) {
+    var pos = values.filter(function (v) { return v != null && v > 0; });
+    var nAll = values.filter(function (v) { return v != null; }).length;
+    if (pos.length < 8) return values.map(function () { return null; });
+    var q0 = (nAll - pos.length) / nAll, m = mean(pos), lm = mean(pos.map(Math.log));
+    var A = Math.log(m) - lm, alpha = (1 + Math.sqrt(1 + 4 * A / 3)) / (4 * A), beta = m / alpha;
+    return values.map(function (v) {
+      if (v == null) return null;
+      var H = q0 + (1 - q0) * (v > 0 ? gammaP(alpha, v / beta) : 0);
+      return Math.max(-3.5, Math.min(3.5, normInv(Math.min(Math.max(H, 1e-6), 1 - 1e-6))));
+    });
+  }
+  // Agricultural year: October of year y-1 to September of year y (winter crops are sown in autumn).
+  function waterYearRain(d) {
+    var out = [], ys = d._years;
+    for (var k = 1; k < ys.length; k++) {
+      var y = ys[k], a = d.PRECTOTCORR[y - 1], b = d.PRECTOTCORR[y], tot = 0, ok = !!(a && b);
+      for (var mth = 9; ok && mth < 12; mth++) { if (a[mth] == null) ok = false; else tot += a[mth] * MD[mth]; }
+      for (mth = 0; ok && mth < 9; mth++) { if (b[mth] == null) ok = false; else tot += b[mth] * MD[mth]; }
+      if (ok) out.push([y, tot]);
+    }
+    return out;
+  }
+  function patterns(d) {
+    var an = annual(d), ys = an.years;
+    var summerTX = ys.map(function (y) { var r = d.T2M_MAX && d.T2M_MAX[y]; return r && r[5] != null && r[6] != null && r[7] != null ? (r[5] + r[6] + r[7]) / 3 : null; });
+    var winterTN = ys.map(function (y) { var r = d.T2M_MIN && d.T2M_MIN[y]; return r && r[0] != null && r[1] != null && r[11] != null ? (r[0] + r[1] + r[11]) / 3 : null; });
+    var springRain = ys.map(function (y) { var r = d.PRECTOTCORR[y]; return r && r[2] != null && r[3] != null && r[4] != null ? r[2] * MD[2] + r[3] * MD[3] + r[4] * MD[4] : null; });
+    var defs = [
+      ['temp', 'Yıllık ortalama sıcaklık', '°C', an.temp, 1],
+      ['summerTX', 'Yaz günlük en yüksek sıcaklık (haz–ağu)', '°C', summerTX, 1],
+      ['winterTN', 'Kış günlük en düşük sıcaklık (ara–şub)', '°C', winterTN, 1],
+      ['rain', 'Yıllık yağış', 'mm', an.rain, 0],
+      ['springRain', 'İlkbahar yağışı (mar–may)', 'mm', springRain, 0],
+      ['wet', 'Kök bölgesi toprak nemi (0–1 ölçeği)', '', an.wet, 3],
+    ];
+    var series = defs.map(function (df) { return { key: df[0], name: df[1], unit: df[2], dec: df[4], years: ys, values: df[3], mk: mannKendall(ys, df[3]) }; });
+    var wy = waterYearRain(d), wyY = wy.map(function (r) { return r[0]; }), z = spi(wy.map(function (r) { return r[1]; }));
+    var half = Math.floor(wyY.length / 2), dry = function (from, to) { return z.slice(from, to).filter(function (v) { return v != null && v <= -1; }).length; };
+    return {
+      series: series,
+      spi: { years: wyY, rain: wy.map(function (r) { return r[1]; }), values: z,
+        dryYears: wyY.filter(function (y, i) { return z[i] != null && z[i] <= -1; }),
+        wetYears: wyY.filter(function (y, i) { return z[i] != null && z[i] >= 1; }),
+        firstHalf: { from: wyY[0], to: wyY[half - 1], dry: dry(0, half) },
+        secondHalf: { from: wyY[half], to: wyY[wyY.length - 1], dry: dry(half, wyY.length) },
+        trend: mannKendall(wyY, z) }
+    };
+  }
+
   // Replace monthly extreme T2M_MAX/T2M_MIN with the mean of the daily values in that month.
   function applyDailyMeans(P, D) {
     let n = 0;
@@ -935,7 +1088,7 @@ var FS = (function () {
     return out.sort((a, b) => a.d < b.d ? -1 : 1);
   }
 
-  return { CROPS: CROPS, NADAS: NADAS, SALT: SALT, LIME: LIME, applyDailyMeans: applyDailyMeans, ndviQA: ndviQA, trap: trap, ramp: ramp, seasonStats: seasonStats, POWER_PARAMS: POWER_PARAMS, MD: MD, parsePower: parsePower, climatology: climatology, shiftClim: shiftClim, annual: annual, suit: suit, plan: plan, LIMTXT: LIMTXT, LIMFARM: LIMFARM, GROUP: GROUP, FAMTR: FAMTR, ndviSummary: ndviSummary, synthPower: synthPower, mean: mean, slope: slope };
+  return { CROPS: CROPS, NADAS: NADAS, SALT: SALT, LIME: LIME, mannKendall: mannKendall, spi: spi, patterns: patterns, waterYearRain: waterYearRain, normCdf: normCdf, normInv: normInv, gammaP: gammaP, applyDailyMeans: applyDailyMeans, ndviQA: ndviQA, trap: trap, ramp: ramp, seasonStats: seasonStats, POWER_PARAMS: POWER_PARAMS, MD: MD, parsePower: parsePower, climatology: climatology, shiftClim: shiftClim, annual: annual, suit: suit, plan: plan, LIMTXT: LIMTXT, LIMFARM: LIMFARM, GROUP: GROUP, FAMTR: FAMTR, ndviSummary: ndviSummary, synthPower: synthPower, mean: mean, slope: slope };
 })();
 
 
@@ -1247,7 +1400,7 @@ function loadSnap(key, scroll, force) {
 })();
 
 // ---------- Compute ----------
-const BANDS = ['planBand', 'sumBand', 'shiftBand', 'suitBand', 'climBand', 'soilBand'];
+const BANDS = ['planBand', 'sumBand', 'patternBand', 'shiftBand', 'suitBand', 'climBand', 'soilBand'];
 function compute(scroll) {
   const d = S.data, ys = d._years.filter(y => d.T2M[y] && d.T2M[y].every(v => v != null));
   const last = ys[ys.length - 1], first = ys[0];
@@ -1286,6 +1439,7 @@ function compute(scroll) {
   renderImpact(P, ss, irr);
   renderSummary(P, ss, irr, drought);
   renderShiftLine(Pb, P, renderShift(Pb, P, sb, ss, irr), dT, dP);
+  renderPatterns();
   renderSuit(sb, sr, ss);
   renderClimate(first, last, drought);
   flashChanged();
@@ -1389,6 +1543,62 @@ function renderImpact(P, ss, irr) {
     ? stat('Hasat alınan yıl', `+${nadasB - nadasP} yıl`, `Nadas ${nadasB} yıldan ${nadasP} yıla iner`, 'y', true)
     : stat('Bitki ailesi', `${new Set(top.seq.filter(c => c.id !== 'nadas').map(c => c.f)).size} farklı`, 'Fiyat ve kuraklık riski dağılır', 'y');
   $('impCards').innerHTML = h;
+}
+
+// ---------- Climate patterns (historical NASA POWER; not affected by the scenario sliders) ----------
+const signTr = v => (v > 0 ? '+' : v < 0 ? '−' : '') + String(Math.abs(v)).replace('.', ',');
+function trendLabel(mk, upIsBad) {
+  if (!mk) return { k: 'nil', t: 'yetersiz veri' };
+  const dir = mk.sen > 0 ? 'artış' : 'azalış';
+  if (mk.p < 0.05) return { k: (mk.sen > 0) === upIsBad ? 'no' : 'ok', t: `Belirgin ${dir}` };
+  if (mk.p < 0.10) return { k: 'risk', t: `Zayıf ${dir} işareti` };
+  return { k: 'nil', t: 'Belirgin eğilim yok' };
+}
+function renderPatterns() {
+  const P = FS.patterns(S.data), by = k => P.series.find(x => x.key === k);
+  const BAD_UP = { temp: true, summerTX: true, winterTN: false, rain: false, springRain: false, wet: false };
+  const per10 = s => s.mk ? +(s.mk.sen * 10).toFixed(s.dec) : null;
+  const tr = by('temp'), tx = by('summerTX'), rn = by('rain'), sp = P.spi;
+  const y0 = tr.years[0], y1 = tr.years[tr.years.length - 1];
+  $('patEyebrow').textContent = `İklim örüntüsü · ${y0}–${y1} · NASA POWER`;
+
+  // Headline: lead with what is statistically clear.
+  const parts = [];
+  if (tr.mk && tr.mk.p < 0.05 && tr.mk.sen > 0) parts.push(`Isınma belirgin: 10 yılda ${signTr(per10(tr))} °C`);
+  else parts.push('Sıcaklıkta belirgin eğilim yok');
+  if (rn.mk && rn.mk.p < 0.05) parts.push(`yağış belirgin şekilde ${rn.mk.sen > 0 ? 'artıyor' : 'azalıyor'}`);
+  const dA = sp.firstHalf.dry, dB = sp.secondHalf.dry;
+  if (dB > dA) parts.push(`kurak yıllar sıklaştı (${dA} → ${dB})`);
+  else if (dB < dA) parts.push(`kurak yıllar seyreldi (${dA} → ${dB})`);
+  else if (!(rn.mk && rn.mk.p < 0.05)) parts.push('yağışta belirgin eğilim yok');
+  $('patTitle').textContent = parts.join('; ');
+  $('patTitle').dataset.k = 'pat';
+
+  // What it means, in plain language.
+  const lead = [];
+  if (tx.mk && tx.mk.p < 0.10 && tx.mk.sen > 0) lead.push(`Yaz sıcakları da artıyor (${signTr(per10(tx))} °C / 10 yıl)` + '; başak dolumu ve çiçeklenme dönemi sıcağa denk gelen ürünlerde erkenci çeşit ve erken ekim önem kazanıyor.');
+  if (dB > dA) lead.push(`${sp.secondHalf.from}–${sp.secondHalf.to} arasında ${dB} kurak yıl oldu, önceki ${sp.firstHalf.to - sp.firstHalf.from + 1} yılda ${dA}. Kıraç tarlada kuraklığa dayanıklı ürün ve nadas kararını bu sıklığa göre vermek gerekir.`);
+  if (!lead.length) lead.push('Uzun dönem eğilimler planı değiştirecek kadar güçlü değil; yıldan yıla oynaklık daha belirleyici.');
+  lead.push('<span class="muted">Bu bölüm geçmiş ölçümlere dayanır; gelecek tahmini değildir.</span>');
+  $('patLead').innerHTML = lead.join(' ');
+
+  $('patTrends').innerHTML = P.series.map(s => {
+    const v = per10(s), lab = trendLabel(s.mk, BAD_UP[s.key]);
+    return `<li><span class="tn">${s.name}</span><span class="tv num" data-k="pt-${s.key}">${v == null ? '–' : signTr(v) + ' ' + s.unit}</span>
+      <span class="ts">${bdg(lab)}<span class="raw eng-only">${s.mk ? `p = ${s.mk.p.toFixed(3)} · τ = ${s.mk.tau.toFixed(2)} · n = ${s.mk.n}` : ''}</span></span></li>`;
+  }).join('');
+
+  const max = 2.5, step = Math.ceil(sp.years.length / 6);
+  $('patSpi').innerHTML = sp.years.map((y, i) => {
+    const z = sp.values[i]; if (z == null) return '<span class="yb"></span>';
+    const h = Math.min(Math.abs(z), max) / max * 50, cls = z <= -1 ? 'dry' : z >= 1 ? 'wet' : '';
+    const pos = z >= 0 ? `bottom:50%;height:${h}%` : `top:50%;height:${h}%`;
+    return `<span class="yb ${cls}" title="${y}: SPI ${z.toFixed(2)} · ${Math.round(sp.rain[i])} mm"><i style="${pos}"></i>${i % step === 0 || i === sp.years.length - 1 ? `<b>${y}</b>` : ''}</span>`;
+  }).join('');
+  $('patSpi').setAttribute('aria-label', `SPI ${sp.years[0]}–${sp.years[sp.years.length - 1]}. Kurak yıllar: ${sp.dryYears.join(', ') || 'yok'}. Yağışlı yıllar: ${sp.wetYears.join(', ') || 'yok'}.`);
+  $('patSpiText').innerHTML = `Kurak yıllar: <b>${sp.dryYears.join(', ') || 'yok'}</b>. Yağışlı yıllar: ${sp.wetYears.join(', ') || 'yok'}. `
+    + `${sp.firstHalf.from}–${sp.firstHalf.to}: <b class="num">${dA}</b> kurak yıl · ${sp.secondHalf.from}–${sp.secondHalf.to}: <b class="num">${dB}</b> kurak yıl.`
+    + `<span class="eng-only muted"> SPI eğilimi: ${sp.trend ? `Sen ${(sp.trend.sen * 10).toFixed(2)} / 10 yıl, p = ${sp.trend.p.toFixed(3)}` : '–'}.</span>`;
 }
 
 // ---------- Shift ----------
