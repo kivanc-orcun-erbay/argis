@@ -23,12 +23,17 @@ async function oneLoad(browser, prof) {
   if (prof.net) await cdp.send('Network.emulateNetworkConditions', prof.net);
   if (prof.cpu > 1) await cdp.send('Emulation.setCPUThrottlingRate', { rate: prof.cpu });
   await page.addInitScript(() => {
-    window.__lcp = 0;
+    window.__lcp = 0; window.__plan = null;
     new PerformanceObserver(l => { for (const e of l.getEntries()) window.__lcp = e.startTime; }).observe({ type: 'largest-contentful-paint', buffered: true });
+    // Record, inside the page, the moment the first plan is written (independent of the load event).
+    new MutationObserver((_, obs) => {
+      const t = document.getElementById('planTitle');
+      if (t && /→/.test(t.getAttribute('aria-label') || '')) { window.__plan = performance.now(); obs.disconnect(); }
+    }).observe(document, { subtree: true, childList: true, attributes: true, attributeFilter: ['aria-label'] });
   });
   await page.goto(URL, { waitUntil: 'load', timeout: 120_000 });
   await page.waitForFunction(() => /→/.test(document.getElementById('planTitle')?.getAttribute('aria-label') || ''), null, { timeout: 120_000 });
-  const planAt = await page.evaluate(() => performance.now());
+  const planAt = await page.evaluate(() => window.__plan);
   await page.waitForTimeout(500);
   const m = await page.evaluate(() => {
     const n = performance.getEntriesByType('navigation')[0], res = performance.getEntriesByType('resource');

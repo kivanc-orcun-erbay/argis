@@ -99,3 +99,18 @@ test('a late MODIS answer does not overwrite a preset chosen in the meantime', a
   await expect(status(page)).toHaveText(presetStatus);
   await expect(page.locator('#evidenceNote')).toContainText('kaydedilmiş gerçek NASA verisi');
 });
+
+test('slow SoilGrids: plan appears after ~5 s without soil, then updates when soil arrives', async ({ page }) => {
+  await open(page, { soil: 8000 });
+  const t = Date.now();
+  await goAt(page);
+  await expect(page.locator('#go')).toHaveAttribute('aria-busy', 'false', { timeout: 8000 });
+  const waited = Date.now() - t;
+  expect(waited).toBeLessThan(7500);            // did not wait the full 8 s for soil
+  await expect(page.locator('#srcStatus li[data-src="soil"]')).toHaveAttribute('data-state', 'loading');
+  await expect(status(page)).toContainText('SoilGrids toprak');
+  await expect(status(page)).toContainText('arka planda yükleniyor');
+  await expect(page.locator('#srcStatus li[data-src="soil"]')).toHaveAttribute('data-state', 'ok', { timeout: 10_000 });
+  await expect(status(page)).not.toContainText('SoilGrids toprak');
+  await expect(page.locator('#soilNote')).toContainText('SoilGrids tahmini');
+});

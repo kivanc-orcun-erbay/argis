@@ -1091,7 +1091,7 @@ async function getPower(lat, lon) {
 }
 async function getSoil(lat, lon) {
   const url = `https://rest.isric.org/soilgrids/v2.0/properties/query?lon=${lon}&lat=${lat}&property=phh2o&property=clay&property=soc&depth=0-5cm&depth=5-15cm&depth=15-30cm&value=mean`;
-  const r = await fetchT(url); if (!r.ok) throw new Error('SoilGrids ' + r.status);
+  const r = await fetchT(url, {}, 60000); if (!r.ok) throw new Error('SoilGrids ' + r.status);
   const j = await r.json(), o = {};
   j.properties.layers.forEach(L => { const df = L.unit_measure.d_factor || 1; const vs = L.depths.map(d => d.values.mean).filter(v => v != null); o[L.name] = vs.length ? FS.mean(vs) / df : null; });
   return { ph: o.phh2o, clay: o.clay, soc: o.soc };
@@ -1142,32 +1142,42 @@ $('go').addEventListener('click', async () => {
   catch (e) { status('Beklenmeyen hata: ' + e.message, 'err'); }
   finally { lock(false); }
 });
-// Live lookup. NASA POWER (+ daily temps) and SoilGrids answer in ~1-3 s; MODIS (ORNL) often
-// takes close to a minute per request. So the plan is drawn as soon as POWER and soil arrive,
-// and MODIS keeps loading in the background: if it arrives the plan is recomputed, if not the
-// status says so. fetchGen makes results from an older lookup (or after a preset click) ignored.
+// Live lookup. NASA POWER (+ daily temps) answers in ~1-2 s. SoilGrids usually in ~3 s but
+// sometimes 15-30 s+, and MODIS (ORNL) often close to a minute per request. So the plan is drawn
+// once POWER is in and SoilGrids has answered or SOIL_WAIT has passed; anything still missing keeps
+// loading in the background and the plan is recomputed when it arrives (the status says what is
+// pending). fetchGen makes answers from an older lookup (or after a preset click) ignored.
+const SOIL_WAIT = 5000;
 let fetchGen = 0;
 async function fetchAll(lat, lon) {
-  const gen = ++fetchGen;
+  const gen = ++fetchGen, t0 = performance.now();
   $('srcStatus').hidden = false;
   status('NASA POWER ve SoilGrids okunuyor; birkaç saniye sürer.');
+  const settle = p => p.then(value => ({ ok: true, value }), reason => ({ ok: false, reason }));
   const ndP = track('modis', getNdvi(lat, lon));
-  const [pw, so] = await Promise.allSettled([track('power', getPower(lat, lon)), track('soil', getSoil(lat, lon))]);
+  const soilP = settle(track('soil', getSoil(lat, lon)));
+  const pw = await settle(track('power', getPower(lat, lon)));
   if (gen !== fetchGen) return;
-  if (pw.status !== 'fulfilled') {
-    fetchGen++; // no plan from this lookup, so drop its MODIS result too
+  if (!pw.ok) {
+    fetchGen++; // no plan from this lookup, so drop its background answers too
     const k = snapKeyAt(lat, lon);
     if (k && loadSnap(k, true, true)) return status(`Canlı NASA POWER alınamadı (${pw.reason.message}); ${SNAP[k].fetched} tarihli kayıtlı veri gösteriliyor.`, 'err');
     status('NASA POWER verisi alınamadı (' + pw.reason.message + '). Bağlantını kontrol et ya da hazır bir bölge seç.', 'err'); return;
   }
+  const early = await Promise.race([soilP, new Promise(r => setTimeout(() => r(null), Math.max(0, SOIL_WAIT - (performance.now() - t0))))]);
+  if (gen !== fetchGen) return;
   S.demo = false; S.snap = null; $('demoNote').hidden = true;
   S.data = FS.parsePower(pw.value);
-  if (so.status === 'fulfilled' && so.value.ph != null) { S.soilSat = so.value; applySoil(); $('soilNote').textContent = `SoilGrids tahmini (0–30 cm): pH ${so.value.ph.toFixed(1)}, kil %${fmt(so.value.clay)}, organik karbon ${fmt(so.value.soc, 1)} g/kg. Toprak analizin varsa onu gir.`; }
-  else { S.soilSat = null; applySoil(); $('soilNote').textContent = 'SoilGrids yanıt vermedi; pH ve kili elle gir (boş bırakılırsa sonuç eksik veriyle ön değerlendirmedir).'; }
   S.ndvi = [];
-  S.live = { soilOk: so.status === 'fulfilled' && so.value.ph != null && so.value.clay != null, daily: !!pw.value.dailyMeans, ndvi: 'pending' };
+  S.live = { soil: 'pending', daily: !!pw.value.dailyMeans, ndvi: 'pending' };
+  applySoilAnswer(early);
   liveStatus();
   compute(true);
+  if (!early) soilP.then(res => {
+    if (gen !== fetchGen) return;
+    applySoilAnswer(res); liveStatus(); compute(false);
+    if (S.live.soil === 'ok') toast('SoilGrids toprak verisi geldi; plan güncellendi', 'check');
+  });
   ndP.then(nd => {
     if (gen !== fetchGen) return;
     S.ndvi = nd; S.live.ndvi = nd.some(p => p.v != null) ? 'ok' : 'none';
@@ -1175,11 +1185,26 @@ async function fetchAll(lat, lon) {
     if (S.live.ndvi === 'ok') toast('MODIS yeşillik verisi geldi; plan güncellendi', 'check');
   }, () => { if (gen !== fetchGen) return; S.live.ndvi = 'fail'; liveStatus(); });
 }
+// res: null = still loading, {ok, value|reason} = answered.
+function applySoilAnswer(res) {
+  if (res && res.ok && res.value.ph != null) {
+    S.soilSat = res.value; S.live.soil = res.value.clay != null ? 'ok' : 'none';
+    $('soilNote').textContent = `SoilGrids tahmini (0–30 cm): pH ${res.value.ph.toFixed(1)}, kil %${fmt(res.value.clay)}, organik karbon ${fmt(res.value.soc, 1)} g/kg. Toprak analizin varsa onu gir.`;
+  } else if (res) {
+    S.soilSat = null; S.live.soil = 'fail';
+    $('soilNote').textContent = 'SoilGrids yanıt vermedi; pH ve kili elle gir (boş bırakılırsa sonuç eksik veriyle ön değerlendirmedir).';
+  } else {
+    S.soilSat = null; S.live.soil = 'pending';
+    $('soilNote').textContent = 'SoilGrids yavaş yanıt veriyor; toprak verisi gelince plan güncellenecek.';
+  }
+  applySoil();
+}
 function liveStatus() {
   const L = S.live;
-  const miss = [!L.soilOk && 'toprak', (L.ndvi === 'fail' || L.ndvi === 'none') && 'uydu yeşilliği'].filter(Boolean);
+  const miss = [(L.soil === 'fail' || L.soil === 'none') && 'toprak', (L.ndvi === 'fail' || L.ndvi === 'none') && 'uydu yeşilliği'].filter(Boolean);
+  const wait = [L.soil === 'pending' && 'SoilGrids toprak', L.ndvi === 'pending' && 'MODIS yeşillik'].filter(Boolean);
   let msg = miss.length ? `Plan hazır; ${miss.join(' ve ')} verisi olmadan hesaplandı.` : 'Plan hazır; güncel NASA verisiyle.';
-  if (L.ndvi === 'pending') msg += ' MODIS yeşillik verisi arka planda yükleniyor; gelirse plan güncellenir.';
+  if (wait.length) msg += ` ${wait.join(' ve ')} verisi arka planda yükleniyor; gelirse plan güncellenir.`;
   if (S.ndvi.dropped) msg += ` ${S.ndvi.dropped} bulutlu/karlı MODIS tarihi ayıklandı.`;
   if (!L.daily) msg += ' Günlük sıcaklık alınamadı; aylık uç değerler kullanıldı, kavrulma ve don riski abartılı olabilir.';
   status(msg, L.daily ? 'ok' : 'err');
