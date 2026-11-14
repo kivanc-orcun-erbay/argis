@@ -14,10 +14,15 @@ NASA iklim verileriyle açıklanabilir münavebe planı üreten araştırma prot
 
 ```sh
 node tests/model.cjs
+node --test tests/unit.cjs
 node tests/regions.cjs
 ```
 
-Ek paket gerektirmez. `model.cjs` JavaScript sözdizimini, eksik toprak verisinin belirsizlik aralığını, toprak analizi (kireç, tuzluluk) etkisini ve iki iklim senaryosunda plan üretimini kontrol eder. `regions.cjs` modeli dört bölgenin gerçek verisiyle çalıştırıp planları tablo olarak yazar.
+Ek paket gerektirmez; her push'ta GitHub Actions'ta da çalışır.
+
+- `model.cjs`: sayfa betikleri ve veri bloğu, eksik toprak verisinin puan aralığı, toprak analizi (kireç, tuzluluk) etkisi.
+- `unit.cjs`: model fonksiyonları. Eşik eğrileri, hasat ayının sıcaklık stresine sayılmaması, yağış / tuz / kireç / ısınma yönünde tutarlılık, plan kuralları, günlük sıcaklık ortalaması, MODIS kalite süzgeci.
+- `regions.cjs`: dört bölgenin gerçek verisiyle akla yatkınlık kuralları (ör. sulu tarlada en fazla 1 yıl nadas, kıraç planda sulama isteyen ürün yok, sulu Harran ve Çukurova'da pamuk uygunluğu ≥ 60) ve `tests/regions.golden.json` kaydı. Planlar veya uygunluk puanları değişirse test kırılır; değişiklik bilerek yapıldıysa gözden geçirip `node tests/regions.cjs --update` ile kaydı güncelleyin.
 
 ## Veri
 

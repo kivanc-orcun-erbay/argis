@@ -906,7 +906,27 @@ var FS = (function () {
     return { properties: { parameter: P } };
   }
 
-  return { CROPS: CROPS, NADAS: NADAS, SALT: SALT, LIME: LIME, POWER_PARAMS: POWER_PARAMS, MD: MD, parsePower: parsePower, climatology: climatology, shiftClim: shiftClim, annual: annual, suit: suit, plan: plan, LIMTXT: LIMTXT, LIMFARM: LIMFARM, GROUP: GROUP, FAMTR: FAMTR, ndviSummary: ndviSummary, synthPower: synthPower, mean: mean, slope: slope };
+
+  // Replace monthly extreme T2M_MAX/T2M_MIN with the mean of the daily values in that month.
+  function applyDailyMeans(P, D) {
+    let n = 0;
+    for (const k of ['T2M_MAX', 'T2M_MIN']) {
+      if (!D[k]) return false;
+      const acc = {};
+      for (const [day, v] of Object.entries(D[k])) { if (v == null || v === -999) continue; const ym = day.slice(0, 6); (acc[ym] = acc[ym] || [0, 0]); acc[ym][0] += v; acc[ym][1]++; }
+      for (const [ym, [s, c]] of Object.entries(acc)) if (c >= 20 && P[k] && ym in P[k]) { P[k][ym] = +(s / c).toFixed(2); n++; }
+    }
+    return n > 0;
+  }
+
+  // [[date, ndvi, reliability]] -> [{d, v}], keeping only good/marginal pixels when reliability is known.
+  function ndviQA(rows) {
+    const out = rows.map(([d, v, q]) => ({ d, v: q == null || q === 0 || q === 1 ? v : null }));
+    out.dropped = rows.filter(([, v, q]) => v != null && q != null && q !== 0 && q !== 1).length;
+    return out.sort((a, b) => a.d < b.d ? -1 : 1);
+  }
+
+  return { CROPS: CROPS, NADAS: NADAS, SALT: SALT, LIME: LIME, applyDailyMeans: applyDailyMeans, ndviQA: ndviQA, trap: trap, ramp: ramp, seasonStats: seasonStats, POWER_PARAMS: POWER_PARAMS, MD: MD, parsePower: parsePower, climatology: climatology, shiftClim: shiftClim, annual: annual, suit: suit, plan: plan, LIMTXT: LIMTXT, LIMFARM: LIMFARM, GROUP: GROUP, FAMTR: FAMTR, ndviSummary: ndviSummary, synthPower: synthPower, mean: mean, slope: slope };
 })();
 
 
@@ -1045,6 +1065,7 @@ async function fetchT(url, opts = {}, ms = 25000) {
   catch (e) { throw e.name === 'AbortError' ? new Error('zaman aşımı') : e; }
   finally { clearTimeout(t); }
 }
+const applyDailyMeans = FS.applyDailyMeans, ndviQA = FS.ndviQA;  // pure helpers live in the FS model block (unit-tested)
 async function getPower(lat, lon) {
   const endY = new Date().getFullYear() - 1;
   const url = `https://power.larc.nasa.gov/api/temporal/monthly/point?parameters=${FS.POWER_PARAMS.join(',')}&community=AG&longitude=${lon}&latitude=${lat}&start=2001&end=${endY}&format=JSON`;
@@ -1058,17 +1079,6 @@ async function getPower(lat, lon) {
   try { if (rd && rd.ok) daily = (await rd.json()).properties.parameter; } catch (e) {}
   j.dailyMeans = !!daily && applyDailyMeans(j.properties.parameter, daily);
   return j;
-}
-// Replace monthly extreme T2M_MAX/T2M_MIN with the mean of the daily values in that month.
-function applyDailyMeans(P, D) {
-  let n = 0;
-  for (const k of ['T2M_MAX', 'T2M_MIN']) {
-    if (!D[k]) return false;
-    const acc = {};
-    for (const [day, v] of Object.entries(D[k])) { if (v == null || v === -999) continue; const ym = day.slice(0, 6); (acc[ym] = acc[ym] || [0, 0]); acc[ym][0] += v; acc[ym][1]++; }
-    for (const [ym, [s, c]] of Object.entries(acc)) if (c >= 20 && P[k] && ym in P[k]) { P[k][ym] = +(s / c).toFixed(2); n++; }
-  }
-  return n > 0;
 }
 async function getSoil(lat, lon) {
   const url = `https://rest.isric.org/soilgrids/v2.0/properties/query?lon=${lon}&lat=${lat}&property=phh2o&property=clay&property=soc&depth=0-5cm&depth=5-15cm&depth=15-30cm&value=mean`;
@@ -1093,12 +1103,6 @@ async function getNdvi(lat, lon) {
   await Promise.all([band('250m_16_days_NDVI', val), band('250m_16_days_pixel_reliability', rel).catch(() => null)]);
   const out = Object.keys(val).map(d => [d, val[d] == null || val[d] < -2000 ? null : val[d] * 0.0001, rel[d]]);
   return ndviQA(out);
-}
-// [[date, ndvi, reliability]] -> [{d, v}], keeping only good/marginal pixels when reliability is known.
-function ndviQA(rows) {
-  const out = rows.map(([d, v, q]) => ({ d, v: q == null || q === 0 || q === 1 ? v : null }));
-  out.dropped = rows.filter(([, v, q]) => v != null && q != null && q !== 0 && q !== 1).length;
-  return out.sort((a, b) => a.d < b.d ? -1 : 1);
 }
 
 // Per-source progress

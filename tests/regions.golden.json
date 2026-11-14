@@ -1,0 +1,186 @@
+{
+ "konya/kıraç": {
+  "plan": [
+   "nohut",
+   "bugday",
+   "kolza"
+  ],
+  "score": 151,
+  "suit": {
+   "bugday": 100,
+   "arpa": 100,
+   "nohut": 99,
+   "mercimek": 93,
+   "fig": 100,
+   "kolza": 99,
+   "aspir": 76,
+   "aycicegi": 45,
+   "misir": 24,
+   "pancar": 27,
+   "pamuk": 22,
+   "patates": 22,
+   "fasulye": 27
+  }
+ },
+ "konya/sulu": {
+  "plan": [
+   "nohut",
+   "bugday",
+   "kolza"
+  ],
+  "score": 151,
+  "suit": {
+   "bugday": 100,
+   "arpa": 100,
+   "nohut": 99,
+   "mercimek": 93,
+   "fig": 100,
+   "kolza": 99,
+   "aspir": 76,
+   "aycicegi": 63,
+   "misir": 33,
+   "pancar": 88,
+   "pamuk": 27,
+   "patates": 28,
+   "fasulye": 74
+  }
+ },
+ "cukurova/kıraç": {
+  "plan": [
+   "nohut",
+   "arpa",
+   "mercimek"
+  ],
+  "score": 109,
+  "suit": {
+   "bugday": 31,
+   "arpa": 32,
+   "nohut": 73,
+   "mercimek": 81,
+   "fig": 49,
+   "kolza": 23,
+   "aspir": 45,
+   "aycicegi": 28,
+   "misir": 27,
+   "pancar": 19,
+   "pamuk": 29,
+   "patates": 16,
+   "fasulye": 18
+  }
+ },
+ "cukurova/sulu": {
+  "plan": [
+   "nohut",
+   "misir",
+   "mercimek"
+  ],
+  "score": 118,
+  "suit": {
+   "bugday": 31,
+   "arpa": 32,
+   "nohut": 73,
+   "mercimek": 81,
+   "fig": 49,
+   "kolza": 23,
+   "aspir": 45,
+   "aycicegi": 32,
+   "misir": 77,
+   "pancar": 25,
+   "pamuk": 95,
+   "patates": 22,
+   "fasulye": 23
+  }
+ },
+ "harran/kıraç": {
+  "plan": [
+   "mercimek",
+   "bugday",
+   "fig"
+  ],
+  "score": 121,
+  "suit": {
+   "bugday": 69,
+   "arpa": 69,
+   "nohut": 50,
+   "mercimek": 100,
+   "fig": 94,
+   "kolza": 24,
+   "aspir": 28,
+   "aycicegi": 22,
+   "misir": 25,
+   "pancar": 19,
+   "pamuk": 27,
+   "patates": 14,
+   "fasulye": 18
+  }
+ },
+ "harran/sulu": {
+  "plan": [
+   "fig",
+   "misir",
+   "mercimek"
+  ],
+  "score": 122,
+  "suit": {
+   "bugday": 69,
+   "arpa": 69,
+   "nohut": 50,
+   "mercimek": 100,
+   "fig": 94,
+   "kolza": 24,
+   "aspir": 28,
+   "aycicegi": 27,
+   "misir": 56,
+   "pancar": 25,
+   "pamuk": 74,
+   "patates": 20,
+   "fasulye": 23
+  }
+ },
+ "trakya/kıraç": {
+  "plan": [
+   "nohut",
+   "bugday",
+   "aspir"
+  ],
+  "score": 149,
+  "suit": {
+   "bugday": 100,
+   "arpa": 100,
+   "nohut": 100,
+   "mercimek": 100,
+   "fig": 100,
+   "kolza": 82,
+   "aspir": 90,
+   "aycicegi": 77,
+   "misir": 26,
+   "pancar": 42,
+   "pamuk": 25,
+   "patates": 22,
+   "fasulye": 25
+  }
+ },
+ "trakya/sulu": {
+  "plan": [
+   "nohut",
+   "bugday",
+   "aspir"
+  ],
+  "score": 149,
+  "suit": {
+   "bugday": 100,
+   "arpa": 100,
+   "nohut": 100,
+   "mercimek": 100,
+   "fig": 100,
+   "kolza": 82,
+   "aspir": 90,
+   "aycicegi": 77,
+   "misir": 56,
+   "pancar": 59,
+   "pamuk": 55,
+   "patates": 27,
+   "fasulye": 45
+  }
+ }
+}

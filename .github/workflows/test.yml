@@ -1,0 +1,26 @@
+name: tests
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      # No packages to install: the tests use only Node's built-in modules.
+      - name: Page scripts, data block and soil-test factors
+        run: node tests/model.cjs
+      - name: Model unit tests
+        run: node --test tests/unit.cjs
+      - name: Regional checks on the embedded NASA data
+        run: node tests/regions.cjs
