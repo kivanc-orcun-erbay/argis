@@ -1,0 +1,11 @@
+# FieldShift is one static page: upload only what the site serves, so Vercel does not try to build it.
+node_modules
+tests
+test-results
+playwright-report
+scripts
+.github
+.claude
+package.json
+package-lock.json
+playwright.config.cjs

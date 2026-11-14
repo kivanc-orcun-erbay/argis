@@ -1,6 +1,8 @@
 # FieldShift
 
-**Canlı:** https://kivanc-orcun-erbay.github.io/fieldshift/
+**Canlı:** https://fieldshift-mu.vercel.app/ (Vercel) · https://kivanc-orcun-erbay.github.io/fieldshift/ (GitHub Pages)
+
+Vercel'e yeniden yüklemek için: `npx vercel@65.8.0 deploy --prod` (`vercel.json` ve `.vercelignore` yalnızca statik sayfayı yükler).
 
 **Sorun.** İklim kayarken çiftçi, geçen yıl ektiği üründen sonra ne ekeceğine çoğunlukla alışkanlıkla karar veriyor. Kıraçta buğday–nadas, sulu tarlada aynı ürün üst üste; su ve toprak tükeniyor.
 
