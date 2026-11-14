@@ -1,6 +1,6 @@
 # Performans ölçümü — 14 Kasım 2026
 
-Ölçülen sürüm: `16db48f` (canlı site, https://kivanc-orcun-erbay.github.io/fieldshift/). Makine: Apple M4 Pro, Chromium 156, Node 25. Telefon profili: CPU 4× yavaş, "yavaş 4G" (1,6 Mbit/s indirme, 150 ms gecikme), 375 px ekran.
+İlk ölçüm `16db48f` sürümünde yapıldı; aşağıdaki iyileştirmelerden sonra `89e317c` sürümünde tekrarlandı (bkz. “İyileştirmelerden sonra”). İlk ölçüm sürümü: `16db48f` (canlı site, https://kivanc-orcun-erbay.github.io/fieldshift/). Makine: Apple M4 Pro, Chromium 156, Node 25. Telefon profili: CPU 4× yavaş, "yavaş 4G" (1,6 Mbit/s indirme, 150 ms gecikme), 375 px ekran.
 
 Yeniden çalıştırmak için:
 
@@ -66,8 +66,22 @@ Canlı sitede tek bir “Münavebe planımı çıkar” tıklaması: NASA POWER 
 
 Ayrı bir yük testi yapılmadı, çünkü FieldShift'in sunucusu yoktur: sayfa GitHub Pages'in CDN'inden gelen tek bir statik dosyadır ve her kullanıcının tarayıcısı NASA / ISRIC / ORNL servislerine doğrudan bağlanır. Kullanıcı sayısı arttıkça yük bu kurumların servislerine dağılır. Onlara toplu istek göndermek hem uygunsuz hem de ölçmek istediğimiz şey değildir. Hazır dört bölge hiçbir dış servise gitmeden, sayfaya gömülü veriyle çalışır; jüri gösterimi servis yükünden etkilenmez.
 
-## Önerilen iyileştirmeler (önem sırasıyla)
+## İyileştirmelerden sonra (`89e317c`)
 
-1. **Planı MODIS'i beklemeden göster.** POWER ve SoilGrids gelince (~2,5 s) planı çiz; MODIS gelirse planı sessizce güncelle, gelmezse durumda belirt. Beklenen etki: 15–25 s → ~2,5 s.
-2. **4 yıllık plan aramasını budama.** Örneğin yalnızca en uygun ~8 ürünle arama yapmak, 3 yıllık sonuçları değiştirmeden telefonda 4 yıllık planı 200 ms'nin altına indirir. Bölgesel kayıt testi sonucun değişip değişmediğini gösterir.
-3. **Açılıştaki 350 ms beklemeyi kaldır.** İlk plan masaüstünde ~1,0 s, telefonda ~2,0 s'ye iner.
+| Ne | Önce | Sonra |
+|---|---:|---:|
+| “Münavebe planımı çıkar”, plan ekranda (canlı) | 15,7 s ve 25 s | **3,1 s** (SoilGrids hızlıyken) / **5,1 s** (SoilGrids yavaşken) |
+| İlk plan, masaüstü | sayfa `load`'undan sonra (~1,4 s) | **0,87 s** (HTML gelir gelmez) |
+| İlk plan, telefon | ~2,3 s | **1,06 s** |
+| 4 yıllık plana geçiş, telefon | 233 ms | **103 ms** |
+| 4 yıllık plan araması (Node, en yavaş bölge) | 59 ms | 16 ms |
+
+Yapılanlar:
+
+1. **Plan, yavaş servisleri beklemiyor.** NASA POWER gelince (~1,5–2 s) plan, SoilGrids'i en çok 5 s bekler. Gelmezse toprak verisi olmadan çizilir (toprağa bağlı puanlar aralık olarak gösterilir). MODIS hiç beklenmez. İkisi de arka planda yüklenmeye devam eder (SoilGrids için 60 s, MODIS için istek başına 90 s); gelince plan yeniden hesaplanır ve kısa bir bildirim çıkar. Durum satırı neyin beklendiğini yazar. Bu arada başka bir konum veya hazır bölge seçilirse eski yanıtlar yok sayılır. Canlı denemede MODIS 143 s sonra hata verdi; plan o sırada zaten ekrandaydı.
+2. **4 yıllık plan araması budandı.** Arama 12.000 diziyi aşacaksa (pratikte yalnızca 4 yıllık planlar) en uygun 9 ürün + nadas ile yapılır. 4 bölge × kıraç/sulu × 3 hedef (24 durum) için ilk üç seçenek tam aramayla birebir aynı. Daha sıkı bir sınır (8 ürün) Trakya'da ayçiçeğini dışarıda bırakıp 3 durumda sonucu değiştirdiği için kullanılmadı. 2 ve 3 yıllık planlar budanmaz. 4 yıllık planlar artık `tests/regions.golden.json` kaydında.
+3. **Açılıştaki 350 ms bekleme kaldırıldı.** Kayıtlı Konya planı sayfa betiği çalışır çalışmaz çizilir.
+
+Ölçüm notu: İlk ölçümde “ilk plan” süresi sayfanın `load` olayı beklendikten sonra okunuyordu, bu yüzden hiçbir zaman `load` süresinden kısa çıkamıyordu. `page.cjs` artık planın yazıldığı anı sayfanın içinde kaydediyor. Önceki tablolardaki “İlk plan” sütunu bu yüzden olduğundan uzun görünür.
+
+Testler: “yavaş SoilGrids”, “yavaş MODIS” ve “geç gelen yanıt yeni seçimi bozmaz” tarayıcı testleri eklendi (toplam 23).
