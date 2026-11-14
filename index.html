@@ -626,9 +626,9 @@ var FS = (function () {
     { id: 'kolza', n: 'Kolza', f: 'Brassicaceae', g: 'genis', s: 'K', m: [9, 10, 11, 12, 1, 2, 3, 4, 5, 6], t: [2, 5, 12, 16], tx: [28, 34], tn: [-15, -5], r: [300, 420, 800, 1200], irr: 'no', wn: 500, ph: [5.5, 6, 7.8, 8.5], soil: 0, root: 'd', gap: 3, inc: 4 },
     { id: 'aspir', n: 'Aspir', f: 'Asteraceae', g: 'genis', s: 'Y', m: [3, 4, 5, 6, 7, 8], t: [10, 14, 23, 28], tx: [34, 40], tn: [-4, 2], r: [120, 220, 500, 900], irr: 'no', wn: 450, ph: [5.5, 6.5, 8.2, 8.8], soil: 0, root: 'd', gap: 3, inc: 3 },
     { id: 'aycicegi', n: 'Ayçiçeği', f: 'Asteraceae', g: 'genis', s: 'Y', m: [4, 5, 6, 7, 8, 9], t: [13, 17, 25, 30], tx: [33, 39], tn: [2, 7], r: [200, 350, 650, 1000], irr: 'opt', wn: 550, ph: [5.5, 6.2, 8, 8.6], soil: -1, root: 'd', gap: 4, inc: 4 },
-    { id: 'misir', n: 'Mısır (dane)', f: 'Poaceae', g: 'tahil', s: 'Y', m: [4, 5, 6, 7, 8, 9], t: [15, 19, 27, 32], tx: [34, 39], tn: [4, 10], r: [400, 600, 900, 1300], irr: 'yes', wn: 700, ph: [5.5, 6, 7.8, 8.5], soil: -1, root: 'd', gap: 2, inc: 4 },
+    { id: 'misir', n: 'Mısır (dane)', f: 'Poaceae', g: 'tahil', s: 'Y', m: [4, 5, 6, 7, 8, 9], t: [15, 19, 27, 32], tx: [36, 44], tn: [4, 10], r: [400, 600, 900, 1300], irr: 'yes', wn: 700, ph: [5.5, 6, 7.8, 8.5], soil: -1, root: 'd', gap: 2, inc: 4 },
     { id: 'pancar', n: 'Şeker pancarı', f: 'Amaranthaceae', g: 'genis', s: 'Y', m: [4, 5, 6, 7, 8, 9, 10], t: [10, 14, 22, 27], tx: [32, 37], tn: [0, 5], r: [350, 550, 800, 1200], irr: 'yes', wn: 750, ph: [6, 6.5, 8, 8.7], soil: -1, root: 'd', gap: 4, inc: 5 },
-    { id: 'pamuk', n: 'Pamuk', f: 'Malvaceae', g: 'genis', s: 'Y', m: [4, 5, 6, 7, 8, 9, 10], t: [17, 21, 29, 33], tx: [35, 41], tn: [8, 14], r: [450, 650, 1000, 1400], irr: 'yes', wn: 800, ph: [5.5, 6, 8, 8.8], soil: -1, root: 'd', gap: 2, inc: 4 },
+    { id: 'pamuk', n: 'Pamuk', f: 'Malvaceae', g: 'genis', s: 'Y', m: [5, 6, 7, 8, 9, 10], t: [17, 21, 29, 33], tx: [38, 46], tn: [8, 14], r: [450, 650, 1000, 1400], irr: 'yes', wn: 800, ph: [5.5, 6, 8, 8.8], soil: -1, root: 'd', gap: 2, inc: 4 },
     { id: 'patates', n: 'Patates', f: 'Solanaceae', g: 'genis', s: 'Y', m: [4, 5, 6, 7, 8, 9], t: [10, 14, 20, 25], tx: [27, 32], tn: [1, 5], r: [350, 500, 750, 1100], irr: 'yes', wn: 550, ph: [4.8, 5.5, 7.5, 8.3], soil: -1, root: 's', gap: 3, inc: 5, clayMax: 40 },
     { id: 'fasulye', n: 'Kuru fasulye', f: 'Fabaceae', g: 'baklagil', s: 'Y', m: [5, 6, 7, 8, 9], t: [14, 17, 24, 28], tx: [31, 36], tn: [4, 9], r: [300, 400, 600, 900], irr: 'yes', wn: 500, ph: [5.5, 6, 7.8, 8.5], soil: 1, root: 's', gap: 3, inc: 4 }
   ];
@@ -722,7 +722,9 @@ var FS = (function () {
   function seasonStats(crop, c) {
     var idx = crop.m.map(function (m) { return m - 1; });
     var T = mean(idx.map(function (i) { return c.T[i]; }));
-    var TX = Math.max.apply(null, idx.map(function (i) { return c.TX[i] == null ? -99 : c.TX[i]; }));
+    // Heat is judged over the growing months, not the harvest month: by then the crop is mature (grain fill / boll set is earlier).
+    var hIdx = idx.length >= 3 ? idx.slice(0, -1) : idx;
+    var TX = Math.max.apply(null, hIdx.map(function (i) { return c.TX[i] == null ? -99 : c.TX[i]; }));
     var TN = Math.min.apply(null, idx.map(function (i) { return c.TN[i] == null ? 99 : c.TN[i]; }));
     var R = idx.reduce(function (s, i) { return s + (c.R[i] || 0); }, 0);
     var prev = (crop.m[0] + 10) % 12; // ekimden önceki ay
