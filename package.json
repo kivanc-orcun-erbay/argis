@@ -5,7 +5,9 @@
   "scripts": {
     "test": "node tests/model.cjs && node --test tests/unit.cjs && node tests/regions.cjs",
     "test:browser": "playwright test",
-    "serve": "node tests/browser/serve.cjs"
+    "serve": "node tests/browser/serve.cjs",
+    "bench": "node tests/bench/model.cjs && node tests/bench/page.cjs",
+    "bench:services": "node tests/bench/services.cjs"
   },
   "devDependencies": {
     "@axe-core/playwright": "4.10.1",
