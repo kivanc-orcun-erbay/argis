@@ -32,7 +32,7 @@ Hazır bölgelerin verisi `data/raw/` klasöründedir; sayfaya gömülü olan da
 |---|---|---|
 | `<bölge>_power.json` | NASA POWER | 2001–2025 aylık iklim; en yüksek / en düşük sıcaklık günlük verinin aylık ortalamasıdır |
 | `<bölge>_soil.json` | SoilGrids 2.0 (ISRIC) | pH, kil, organik karbon (0–30 cm ortalaması) |
-| `<bölge>_ndvi.json` | MODIS MOD13Q1 (ORNL DAAC) | Son ~5 yıl NDVI ve piksel güvenilirlik bayrağı. Şu an yalnızca Konya var; servis diğer bölgelerde yanıt vermedi |
+| `<bölge>_ndvi.json` | MODIS MOD13Q1 (ORNL DAAC) | Son ~5 yıl (115 tarih) NDVI ve piksel güvenilirlik bayrağı; dört bölge için de var |
 
 Noktalar tarım arazisidir: her birinde SoilGrids verisi vardır ve MODIS MCD12Q1 2025 arazi örtüsü sınıf 12'dir (tarım).
 

@@ -43,7 +43,7 @@ Bölgedeki yaygın uygulama (uzmanla doldurulacak): Konya —, Çukurova —, Ha
 
 Sonuç: sulu Harran'da pamuk uygunluğu 26 → 74/100, mısır 29 → 56/100. Dengeli hedefte plan **Fiğ → Mısır → Kırmızı mercimek** olur; pamuk planı (ör. Pamuk → Kırmızı mercimek → Buğday) münavebe kurallarında geride kalır: mısır bakliyattan sonra azot kredisi (+10) ve hububat kırılımı (+6) alır, pamuk hasadı ile mercimek ekimi arasında bir ay kalır (−5). Çiftçi pamuğun kazanç puanını 5 yapıp "Pazar önceliği"ni seçerse pamuklu planlar 2. ve 3. seçenek olur (123 puan, birinciye 1 puan yakın).
 
-**Hâlâ açık:** Yeni sıcaklık eşikleri ve pamuk takvimi tek bir bölgeye bakılarak ayarlandı; uzman doğrulaması gerekir. Mısırın sıcakta tozlanma riski bu eşiklerle hafife alınmış olabilir. MODIS yeşillik verisi yalnızca Konya için var (servis yanıt vermedi).
+**Hâlâ açık:** Yeni sıcaklık eşikleri ve pamuk takvimi tek bir bölgeye bakılarak ayarlandı; uzman doğrulaması gerekir. Mısırın sıcakta tozlanma riski bu eşiklerle hafife alınmış olabilir. MODIS yeşillik verisi artık dört bölge için de var (her biri 115 tarih, 110–115'i kalite süzgecinden geçiyor). Hiçbir bölgede yeşillik düşüş eğilimi bulunmadığı için planlar ve puanlar değişmedi; `tests/regions.golden.json` kaydı aynı kaldı.
 
 ## Gerçek tarla pilotu kayıt şablonu — henüz tamamlanmadı
 

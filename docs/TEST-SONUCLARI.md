@@ -28,3 +28,7 @@ Gerçek tarla ölçümü, sezon sonu su / gübre / verim kayıtları ve ziraat m
 ## Güncelleme — 14.11.2026 15:11
 
 - `node tests/regions.cjs`: geçti. Dört bölgenin gerçek NASA POWER ve SoilGrids kayıtları sayfaya gömüldü; sonuçlar DEGERLENDIRME.md içinde. MODIS yeşillik kayıtları henüz eklenmedi.
+
+## Güncelleme — 14.11.2026 16:41
+
+- MODIS NDVI verisi dört bölge için de indirildi ve sayfaya gömüldü. `node tests/model.cjs`, `node --test tests/unit.cjs` ve `node tests/regions.cjs` geçti; bölgesel kayıt değişmedi.
