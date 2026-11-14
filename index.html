@@ -521,7 +521,7 @@ td .sub{font-size:var(--f-xs);color:var(--ink-3)}
     <p class="eyebrow">Ürün uygunluğu</p>
     <h2 id="suitTitle"></h2>
   </header>
-  <div class="scroll">
+  <div class="scroll" tabindex="0" role="region" aria-label="Ürün uygunluk tablosu">
     <table class="stack" id="suitT"><thead><tr><th>Ürün</th><th>Durum</th><th>Neden?</th><th>Su ihtiyacı</th><th class="n eng-only">2001–10</th><th class="n eng-only">Son 10 yıl</th><th class="eng-only">Senaryo</th><th>Kazanç (1–5)</th></tr></thead><tbody></tbody></table>
   </div>
   <p class="foot">Bir salma/karık sulaması yaklaşık 70 mm kabul edilir; damlamada daha az su gider. Kazanç puanını kendi bölgendeki fiyatlara göre değiştir, plan hemen güncellenir.</p>
@@ -554,7 +554,7 @@ td .sub{font-size:var(--f-xs);color:var(--ink-3)}
 <section class="band eng-only" id="methodBand">
   <header><p class="eyebrow">Yöntem</p><h2>NASA verisi münavebe kararına nasıl dönüşür</h2></header>
   <div class="prose">
-    <div class="scroll"><table>
+    <div class="scroll" tabindex="0" role="region" aria-label="NASA verisi ve karara etkisi tablosu"><table>
       <thead><tr><th>Veri</th><th>Parametre</th><th>Karara etkisi</th></tr></thead>
       <tbody>
         <tr><td>NASA POWER (MERRA-2, aylık, 2001–bugün)</td><td class="raw">T2M, T2M_MAX, T2M_MIN</td><td>Sezon sıcaklığı, don ve kavrulma uygunluğu; 2001–10 ile son 10 yıl ayrı hesaplanır</td></tr>
@@ -585,7 +585,7 @@ td .sub{font-size:var(--f-xs);color:var(--ink-3)}
     </ul>
     <h3>Kullanılan ürün eşikleri</h3>
     <p>Modelin her ürün için kullandığı sayılar aşağıdadır. Prototip değerleridir; her satır için kaynak eşleştirmesi ve yerel uzman doğrulaması bekleniyor. Tuz eşikleri Maas &amp; Hoffman (1977) / FAO Sulama ve Drenaj 29 tablosundan yaklaşık alınmıştır; * işaretliler yalnızca tolerans sınıfından tahmindir. Kireç eşikleri yalnızca demir eksikliğine hassas ürünler için prototip değeridir.</p>
-    <div class="scroll"><table id="thrT">
+    <div class="scroll" tabindex="0" role="region" aria-label="Ürün eşikleri tablosu"><table id="thrT">
       <thead><tr><th>Ürün</th><th>Sezon (ay)</th><th class="n">Sıcaklık optimum (sınır) °C</th><th class="n">Kavrulma maks. °C</th><th class="n">Don min. °C</th><th class="n">Sezon suyu optimum (sınır) mm</th><th class="n">Su ihtiyacı mm</th><th class="n">pH optimum</th><th class="n">Tuz eşiği ECe dS/m (kayıp %/dS/m)</th><th class="n">Kireç maks. %</th><th>Durum</th></tr></thead>
       <tbody></tbody>
     </table></div>

@@ -1,0 +1,14 @@
+{
+  "name": "fieldshift",
+  "private": true,
+  "description": "FieldShift: NASA climate data to crop rotation plans (single static page)",
+  "scripts": {
+    "test": "node tests/model.cjs && node --test tests/unit.cjs && node tests/regions.cjs",
+    "test:browser": "playwright test",
+    "serve": "node tests/browser/serve.cjs"
+  },
+  "devDependencies": {
+    "@axe-core/playwright": "4.10.1",
+    "@playwright/test": "1.48.2"
+  }
+}

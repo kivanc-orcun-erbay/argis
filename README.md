@@ -24,6 +24,22 @@ Ek paket gerektirmez; her push'ta GitHub Actions'ta da çalışır.
 - `unit.cjs`: model fonksiyonları. Eşik eğrileri, hasat ayının sıcaklık stresine sayılmaması, yağış / tuz / kireç / ısınma yönünde tutarlılık, plan kuralları, günlük sıcaklık ortalaması, MODIS kalite süzgeci.
 - `regions.cjs`: dört bölgenin gerçek verisiyle akla yatkınlık kuralları (ör. sulu tarlada en fazla 1 yıl nadas, kıraç planda sulama isteyen ürün yok, sulu Harran ve Çukurova'da pamuk uygunluğu ≥ 60) ve `tests/regions.golden.json` kaydı. Planlar veya uygunluk puanları değişirse test kırılır; değişiklik bilerek yapıldıysa gözden geçirip `node tests/regions.cjs --update` ile kaydı güncelleyin.
 
+### Tarayıcı testleri
+
+```sh
+npm ci
+npx playwright install chromium
+npx playwright test
+```
+
+Playwright ve axe ile 20 test (`tests/browser/`). Dış servisler (NASA POWER, SoilGrids, MODIS, harita karoları) `data/raw/` verisinden taklit edilir; testler bu servislerin ayakta olmasına bağlı değildir ve her biri bilerek bozulabilir.
+
+- `main.spec.cjs`: sayfa Konya'nın gerçek verisiyle açılır; her hazır bölge (kıraç ve sulu) `regions.golden.json` kaydındaki planı gösterir; sıcak/kurak senaryo düğmesi; toprak analizi (EC) tuza hassas ürünleri düşürür; çiftçi / mühendis görünümü; harita tıklamasında TKGM kartı; konsol hatası yok.
+- `failures.spec.cjs`: “Münavebe planımı çıkar” tüm servisler çalışırken; yükleme durumu; POWER, günlük sıcaklık, MODIS veya SoilGrids çökünce sayfanın ne yaptığı ve ne yazdığı.
+- `quality.spec.cjs`: 375 px telefon ekranında yatay kaydırma yok, karanlık mod, azaltılmış hareket, axe erişilebilirlik taraması (ciddi / kritik ihlal yok).
+
+GitHub Actions her push'ta hem Node testlerini hem tarayıcı testlerini çalıştırır.
+
 ## Veri
 
 Hazır bölgelerin verisi `data/raw/` klasöründedir; sayfaya gömülü olan da budur.
