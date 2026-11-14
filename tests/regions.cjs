@@ -37,7 +37,9 @@ for (const [k, sn] of Object.entries(snap)) {
     check(!!top, `${key}: no plan`);
     if (!top) continue;
     const ids = top.seq.map(c => c.id);
-    results[key] = { plan: ids, score: Math.round(top.total), suit: Object.fromEntries(F.CROPS.map(c => [c.id, suits[c.id].S])) };
+    // 4-year plans use the pruned search (see FS.plan); record them so pruning changes are caught.
+    const P4 = F.plan({ suits, years: 4, prev: 'bugday', irrigation: irr, pri: PRI, ndviWeak });
+    results[key] = { plan: ids, score: Math.round(top.total), plan4: P4.top.map(p => p.seq.map(c => c.id).join('-')), suit: Object.fromEntries(F.CROPS.map(c => [c.id, suits[c.id].S])) };
     rows.push({ bölge: k, su: irr ? 'sulu' : 'kıraç', pH: soil.ph, ndvi: (sn.ndvi || []).length, plan: top.seq.map(c => c.n).join(' → '), puan: Math.round(top.total) });
 
     // --- plausibility rules ---
@@ -70,6 +72,7 @@ if (process.argv.includes('--update')) {
     if (!a || !b) { failures.push(`${key}: ${a ? 'missing now' : 'not in saved record'}`); continue; }
     if (a.plan.join() !== b.plan.join()) failures.push(`${key}: plan changed ${a.plan.join('→')} => ${b.plan.join('→')}`);
     if (a.score !== b.score) failures.push(`${key}: plan score changed ${a.score} => ${b.score}`);
+    if (a.plan4 && (a.plan4 || []).join() !== (b.plan4 || []).join()) failures.push(`${key}: 4-year options changed ${a.plan4.join(' | ')} => ${b.plan4.join(' | ')}`);
     for (const id of Object.keys(a.suit)) if (a.suit[id] !== b.suit[id]) failures.push(`${key}: ${id} suitability changed ${a.suit[id]} => ${b.suit[id]}`);
   }
 }

@@ -73,3 +73,29 @@ test('SoilGrids down: plan still made, soil marked missing', async ({ page }) =>
   await expect(status(page)).toContainText('toprak');
   await expect(page.locator('#srcStatus li[data-src="soil"]')).toHaveAttribute('data-state', 'err');
 });
+
+test('slow MODIS: plan appears from POWER + soil, then updates when MODIS arrives', async ({ page }) => {
+  await open(page, { modis: 3000 });
+  await goAt(page);
+  // Plan is ready and the button free while MODIS is still loading.
+  await expect(page.locator('#go')).toHaveAttribute('aria-busy', 'false');
+  await expect(page.locator('#srcStatus li[data-src="modis"]')).toHaveAttribute('data-state', 'loading');
+  await expect(status(page)).toContainText('arka planda yükleniyor');
+  await expect(page.locator('#evidenceNote')).toContainText('Güncel NASA verisi');
+  // MODIS arrives: status settles, toast confirms the update.
+  await expect(page.locator('#srcStatus li[data-src="modis"]')).toHaveAttribute('data-state', 'ok', { timeout: 15_000 });
+  await expect(status(page)).toContainText('Plan hazır; güncel NASA verisiyle.');
+  await expect(status(page)).not.toContainText('arka planda');
+  await expect(page.locator('#toast')).toContainText('MODIS yeşillik verisi geldi');
+});
+
+test('a late MODIS answer does not overwrite a preset chosen in the meantime', async ({ page }) => {
+  await open(page, { modis: 2500 });
+  await goAt(page);
+  await expect(page.locator('#go')).toHaveAttribute('aria-busy', 'false');
+  await page.locator('.pbtn[data-snap="trakya"]').click();
+  const presetStatus = await status(page).innerText();
+  await page.waitForTimeout(3500); // MODIS for the old lookup arrives during this wait
+  await expect(status(page)).toHaveText(presetStatus);
+  await expect(page.locator('#evidenceNote')).toContainText('kaydedilmiş gerçek NASA verisi');
+});
