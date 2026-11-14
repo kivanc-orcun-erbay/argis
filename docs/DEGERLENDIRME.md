@@ -20,6 +20,23 @@
 
 Plan puanı bonus ve cezaları içerir, 100 ile sınırlı değildir; doğruluk yüzdesi veya kâr değildir. Aynı ürün sırası kalırken uygunluğun düşmesi, modelin iklim girdilerine tepki verdiğini gösterir. Gerçek dünyadaki başarısını kanıtlamaz.
 
+## Bölgesel kontrol: gerçek NASA verisiyle (14 Kasım 2026)
+
+`node tests/regions.cjs` sayfaya gömülü gerçek NASA POWER ve SoilGrids kayıtlarıyla dört bölgede modeli çalıştırır (önceki ürün buğday, üç yıl, eşit öncelikler). Noktalar SoilGrids verisi olan ve MODIS MCD12Q1 2025 arazi örtüsünde "tarım arazisi" (sınıf 12) görünen yerlerdir.
+
+**Bu kontrol modelde bir hata yakaladı.** NASA POWER aylık `T2M_MAX` / `T2M_MIN` değerleri ayın en uç sıcaklığıdır; model eşikleri ise ortalama günlük en yüksek / en düşük sıcaklığa göre yazılmıştı (Konya temmuz: uç ~37 °C, günlük ortalama en yüksek ~31 °C). Ayrıca hazır noktalar şehir merkezlerindeydi ve SoilGrids üçünde boş döndü. Düzeltme: günlük POWER verisinin aylık ortalaması kullanılıyor; noktalar tarım arazisine taşındı.
+
+| Bölge | Düzeltmeden önce (kıraç / sulu) | Düzeltmeden sonra, kıraç | Düzeltmeden sonra, sulu |
+|---|---|---|---|
+| Konya Ovası | Fiğ → Arpa → Fiğ | Nohut → Buğday → Kolza | Nohut → Buğday → Kolza |
+| Çukurova | Nadas → Nadas → Nadas | Kırmızı mercimek → Aspir → Fiğ | Aspir → Kırmızı mercimek → Pamuk |
+| Harran Ovası | Nadas → Nadas → Nadas | Kırmızı mercimek → Nadas → Fiğ | Kırmızı mercimek → Nadas → Fiğ |
+| Trakya | Fiğ → Arpa → Fiğ | Nohut → Arpa → Aspir | Nohut → Arpa → Aspir |
+
+Bölgedeki yaygın uygulama (uzmanla doldurulacak): Konya —, Çukurova —, Harran —, Trakya —.
+
+**Açık sorun:** Sulu Harran'da pamuk veya mısır önerilmiyor; bölgenin sulu tarımıyla uyuşmuyor. Pamuk / mısır için ilkbahar soğuk eşikleri ve ekim takvimleri uzmanla gözden geçirilmeli. MODIS yeşillik verisi bu kontrole henüz dahil değil.
+
 ## Gerçek tarla pilotu kayıt şablonu — henüz tamamlanmadı
 
 - Challenge başlığı ve bağlantısı: doldurulacak.

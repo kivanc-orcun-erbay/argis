@@ -2,8 +2,12 @@ const fs = require('node:fs');
 const vm = require('node:vm');
 const assert = require('node:assert/strict');
 const html = fs.readFileSync(require('node:path').join(__dirname, '..', 'index.html'), 'utf8');
-const scripts = [...html.matchAll(/<script(?:\s[^>]*)?>([\s\S]*?)<\/script>/g)].map(m => m[1]).filter(Boolean);
-for (const script of scripts) new vm.Script(script);
+const blocks = [...html.matchAll(/<script(\s[^>]*)?>([\s\S]*?)<\/script>/g)];
+// JavaScript blocks must compile; JSON data blocks (type="application/json") must parse.
+for (const [, attrs = '', body] of blocks) {
+  if (!body.trim()) continue;
+  if (/type="application\/json"/.test(attrs)) JSON.parse(body); else new vm.Script(body);
+}
 const source = html.slice(html.indexOf('var FS = (function'), html.indexOf('})();', html.indexOf('var FS = (function')) + 5);
 const context = {};
 vm.runInNewContext(source, context);
@@ -31,3 +35,21 @@ for (const [name, c] of scenarios) {
 }
 console.log('PASS: inline JavaScript syntax, missing-soil bounds, complete-data scores, two scenario plans.');
 console.log(JSON.stringify(report, null, 2));
+
+// Soil-test factors: optional, never treated as missing data, and they move the score the right way.
+{
+  const soil = { ph: 7.9, clay: 32 };
+  const base = Object.fromEntries(F.CROPS.map(c => [c.id, F.suit(c, climate, soil, true)]));
+  const salty = Object.fromEntries(F.CROPS.map(c => [c.id, F.suit(c, climate, { ...soil, ec: 8 }, true)]));
+  const limey = Object.fromEntries(F.CROPS.map(c => [c.id, F.suit(c, climate, { ...soil, lime: 30 }, true)]));
+  for (const c of F.CROPS) {
+    assert(!('sal' in base[c.id].f) && !('lime' in base[c.id].f), `${c.id}: lab factors must be absent when not entered`);
+    assert(!salty[c.id].unknown.includes('sal'));
+    assert(salty[c.id].S <= base[c.id].S, `${c.id}: salinity must not raise the score`);
+    assert(limey[c.id].S <= base[c.id].S, `${c.id}: lime must not raise the score`);
+  }
+  assert(salty.misir.f.sal < salty.arpa.f.sal, 'maize must be hurt more by salinity than barley');
+  assert.equal(salty.arpa.f.sal, 1, 'barley threshold is 8 dS/m');
+  assert(limey.fasulye.f.lime < 1 && !('lime' in limey.bugday.f), 'lime affects sensitive crops only');
+  console.log('soil-test factors ok');
+}
