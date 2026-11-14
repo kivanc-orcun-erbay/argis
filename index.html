@@ -1155,7 +1155,9 @@ const fmtN = v => Math.round(v).toLocaleString('tr-TR');
 // ---------- Map ----------
 const map = L.map('map', { zoomControl: true }).setView([37.5600, 32.7600], 11);
 const esri = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', { maxZoom: 18, attribution: 'Esri World Imagery' }).addTo(map);
-const osm = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 18, attribution: '© OpenStreetMap' });
+// Street layer from Esri (same provider as the imagery). OpenStreetMap's volunteer tile servers
+// block some browsers / setups with "Access blocked" (403) under their tile usage policy.
+const osm = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Street_Map/MapServer/tile/{z}/{y}/{x}', { maxZoom: 18, attribution: 'Tiles © Esri — Esri, HERE, Garmin, © OpenStreetMap contributors' });
 const d0 = new Date(Date.now() - 24 * 864e5).toISOString().slice(0, 10);
 const gibs = (layer, ext, lvl) => L.tileLayer(`https://gibs.earthdata.nasa.gov/wmts/epsg3857/best/${layer}/default/${d0}/GoogleMapsCompatible_Level${lvl}/{z}/{y}/{x}.${ext}`, { maxNativeZoom: lvl, maxZoom: 18, opacity: .75, attribution: 'NASA GIBS' });
 const ndviL = gibs('MODIS_Terra_NDVI_8Day', 'png', 9);
