@@ -382,7 +382,7 @@ td .sub{font-size:var(--f-xs);color:var(--ink-3)}
       </div>
       <div class="row">
         <div class="field"><label for="soilType">Toprak</label><select id="soilType">
-          <option value="auto">Bilmiyorum (uydudan tahmin)</option>
+          <option value="auto">Bilmiyorum (SoilGrids tahmini)</option>
           <option value="kumlu">Kumlu / süzek</option>
           <option value="tinli">Tınlı / tavlı</option>
           <option value="killi">Ağır / kara kepir (killi)</option>
@@ -401,7 +401,7 @@ td .sub{font-size:var(--f-xs);color:var(--ink-3)}
       <h3>Hedef</h3>
       <div class="choice" role="group" aria-label="Hedef">
         <button type="button" class="opt goal" data-goal="su" aria-pressed="false"><svg class="i"><use href="#i-drop"/></svg><span><b>Suyum kıt</b><small>Az su isteyen, kuraklığa dayanıklı</small></span></button>
-        <button type="button" class="opt goal" data-goal="gelir" aria-pressed="false"><svg class="i"><use href="#i-coins"/></svg><span><b>En çok kazandıran</b><small>Pazar değeri yüksek ürünler</small></span></button>
+        <button type="button" class="opt goal" data-goal="gelir" aria-pressed="false"><svg class="i"><use href="#i-coins"/></svg><span><b>Pazar önceliği</b><small>Göreli tercih; kâr tahmini değil</small></span></button>
         <button type="button" class="opt goal" data-goal="toprak" aria-pressed="false"><svg class="i"><use href="#i-sprout"/></svg><span><b>Toprağı dinlendir</b><small>Bakliyat ve fiğle gübre tasarrufu</small></span></button>
         <button type="button" class="opt goal" data-goal="denge" aria-pressed="true"><svg class="i"><use href="#i-scale"/></svg><span><b>Dengeli</b><small>Su, toprak ve kazanç birlikte</small></span></button>
       </div>
@@ -441,6 +441,7 @@ td .sub{font-size:var(--f-xs);color:var(--ink-3)}
     <p class="eyebrow" id="planEyebrow">Önerilen münavebe</p>
     <h2 class="hero-title" id="planTitle"></h2>
     <p class="muted sm" id="planSub"></p>
+    <p class="notice" id="evidenceNote" aria-live="polite"></p>
   </header>
   <div class="hero-grid">
     <div>
@@ -530,7 +531,7 @@ td .sub{font-size:var(--f-xs);color:var(--ink-3)}
       <thead><tr><th>Veri</th><th>Parametre</th><th>Karara etkisi</th></tr></thead>
       <tbody>
         <tr><td>NASA POWER (MERRA-2, aylık, 2001–bugün)</td><td class="raw">T2M, T2M_MAX, T2M_MIN</td><td>Sezon sıcaklığı, don ve kavrulma uygunluğu; 2001–10 ile son 10 yıl ayrı hesaplanır</td></tr>
-        <tr><td>NASA POWER (GPM/IMERG tabanlı)</td><td class="raw">PRECTOTCORR</td><td>Sezon yağışı ve yağış eğilimi → kuraklık baskısı → sulu ürünlere su cezası</td></tr>
+        <tr><td>NASA POWER (MERRA-2, düzeltilmiş yağış)</td><td class="raw">PRECTOTCORR</td><td>Sezon yağışı ve yağış eğilimi → kuraklık baskısı → sulu ürünlere su cezası</td></tr>
         <tr><td>NASA POWER (MERRA-2)</td><td class="raw">GWETROOT</td><td>Ekim öncesi kök bölgesinde depolanan su (tav) sezon suyuna eklenir</td></tr>
         <tr><td>MODIS MOD13Q1 (ORNL DAAC)</td><td class="raw">NDVI 250 m, 16 gün</td><td>Parselin yeşillik eğilimi; zayıflıyorsa bakliyata ve nadasa ek puan</td></tr>
         <tr><td>NASA GIBS</td><td class="raw">MODIS NDVI, gerçek renk, SMAP L4</td><td>Haritada güncel görsel kontrol (sağ üst katman menüsü)</td></tr>
@@ -539,23 +540,32 @@ td .sub{font-size:var(--f-xs);color:var(--ink-3)}
     </table></div>
     <h3>Model</h3>
     <ul>
-      <li><b>Uygunluk (0–100):</b> sıcaklık, kavrulma, don, su, pH ve kil faktörleri FAO EcoCrop aralıklarından trapez fonksiyonla 0–1 puanlanır; skor = 100 × (0,65 × en düşük faktör + 0,35 × ortalama).</li>
+      <li><b>Uygunluk (0–100):</b> sıcaklık, kavrulma, don, su, pH ve kil faktörleri yaklaşık prototip eşiklerinden trapez fonksiyonla 0–1 puanlanır; skor = 100 × (0,65 × en düşük faktör + 0,35 × ortalama).</li>
       <li><b>Münavebe:</b> uygunluğu ≥30 olan ürünlerle (artı nadas) tüm N yıllık diziler denenir; aile tekrarı, azot kredisi, hastalık zinciri, kök derinliği, takvim çakışması ve su/toprak/kazanç öncelikleri puanlanır.</li>
       <li><b>Su:</b> sulama ihtiyacı = sezon su ihtiyacı − (sezon yağışı + depolanan toprak suyu). 1 mm = 1 m³/da; 1 salma ≈ 70 mm.</li>
       <li><b>Gübre:</b> bakliyat sonrası 3–5 kg N/da azot kredisi (≈ 6,5–11 kg üre/da) varsayılır; yukarıdan değiştirilebilir.</li>
       <li><b>Karşılaştırma:</b> kıraçta buğday–nadas; sulu tarlada önceki ürün ile buğdayın dönüşümlü ekimi.</li>
     </ul>
+    <h3>Kanıt ve varsayımlar</h3>
+    <p>Bu sürüm bir araştırma prototipidir. Çiftçi pilotu, uzman onayı ve ölçülmüş verim / tasarruf sonucu henüz yoktur.</p>
+    <ul>
+      <li><a href="https://www.fao.org/land-water/resources/tools/databases/ecocrop/en">FAO EcoCrop</a> genel ürün gereksinimleri referansıdır. Buradaki ürün eşikleri ve ekim takvimleri yaklaşık değerlerdir; her ürün için kaynak eşleştirmesi ve yerel doğrulama beklenmektedir.</li>
+      <li>0,65 / 0,35 uygunluk ağırlıkları, münavebe bonus ve cezaları, 3–5 kg N/da azot katkısı ve depolanan su dönüşümü prototip varsayımlarıdır; kalibre edilmiş bilimsel katsayılar değildir.</li>
+      <li>Eksik pH / kil faktörlerine tam puan verilmez. Sıralama bilinen faktörlerle yapılır; eksik faktörlerin 0–1 aralığı ayrıca gösterilir. Bu aralık istatistiksel güven aralığı değildir.</li>
+      <li><a href="https://power.larc.nasa.gov/docs/methodology/data/sources_meteorology/">NASA POWER kaynak açıklaması</a>: PRECTOTCORR, MERRA-2 düzeltilmiş yağışıdır. Aylık iklim ortalamaları günlük don / sıcak dalgası tahmini değildir.</li>
+      <li>MODIS yeşillik düşüşü tek başına toprak bozulmasını kanıtlamaz. Ürün değişimi ve bulut etkisi ayrıştırılmamıştır; kalite bayraklarıyla filtreleme henüz uygulanmamıştır.</li>
+    </ul>
     <h3>Sınırlar ve maliyet</h3>
     <ul>
       <li>POWER ~50 km ızgara verisidir; NDVI 250 m piksel olduğundan küçük parsellerde komşu tarlalar karışabilir. Verim ve kâr tahmini yapılmaz.</li>
-      <li>Tek HTML dosyası; sunucu, veritabanı ve API anahtarı yok. İşletme ve veri maliyeti 0 ₺.</li>
+      <li>Tek HTML dosyası; sunucu, veritabanı ve API anahtarı yok. Bu prototipte ücretli veri aboneliği ve uygulama sunucusu yoktur. Barındırma, bakım, destek ve saha doğrulama maliyetleri ayrıca değerlendirilmelidir.</li>
     </ul>
   </div>
 </section>
 
 <footer class="band src">
   <p class="farm-only">Yağış, sıcaklık ve toprak nemi NASA POWER'dan, tarla yeşilliği NASA MODIS uydusundan, toprak bilgisi SoilGrids'ten alınır. Bu bir öneridir; son karar için ilçe tarım müdürlüğüne veya ziraat mühendisine danışın.</p>
-  <p class="eng-only">Kaynaklar: <a href="https://power.larc.nasa.gov/">NASA POWER</a> · <a href="https://modis.ornl.gov/data/modis_webservice.html">ORNL DAAC MODIS</a> · <a href="https://www.earthdata.nasa.gov/engage/open-data-services-software/earthdata-developer-portal/gibs-api">NASA GIBS</a> · <a href="https://www.isric.org/explore/soilgrids">SoilGrids 2.0</a> · FAO EcoCrop (yaklaşık eşikler). Karar desteğidir; son karar için yerel ziraat mühendisine danışın.</p>
+  <p class="eng-only">Kaynaklar: <a href="https://power.larc.nasa.gov/">NASA POWER</a> · <a href="https://modis.ornl.gov/data/modis_webservice.html">ORNL DAAC MODIS</a> · <a href="https://www.earthdata.nasa.gov/engage/open-data-services-software/earthdata-developer-portal/gibs-api">NASA GIBS</a> · <a href="https://www.isric.org/explore/soilgrids">SoilGrids 2.0</a> · FAO EcoCrop (genel referans; ürün eşikleri tek tek doğrulanmadı). Karar desteğidir; son karar için yerel ziraat mühendisine danışın.</p>
 </footer>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
@@ -685,14 +695,18 @@ var FS = (function () {
     var needsIrr = crop.irr === 'yes';
     if (irrigation && (crop.irr === 'yes' || crop.irr === 'opt')) f.water = 1;
     else f.water = trap(st.eff, crop.r);
-    f.ph = soil && soil.ph != null ? trap(soil.ph, crop.ph) : 1;
-    f.tex = (crop.clayMax && soil && soil.clay != null) ? (soil.clay <= crop.clayMax ? 1 : Math.max(0, 1 - (soil.clay - crop.clayMax) / 15)) : 1;
-    var vals = Object.keys(f).map(function (k) { return f[k]; });
-    var mn = Math.min.apply(null, vals), av = mean(vals);
-    var S = Math.round(100 * (0.65 * mn + 0.35 * av));
-    var lim = Object.keys(f).sort(function (a, b) { return f[a] - f[b]; })[0];
+    f.ph = soil && soil.ph != null ? trap(soil.ph, crop.ph) : null;
+    f.tex = !crop.clayMax ? 1 : soil && soil.clay != null ? (soil.clay <= crop.clayMax ? 1 : Math.max(0, 1 - (soil.clay - crop.clayMax) / 15)) : null;
+    var unknown = Object.keys(f).filter(function (k) { return f[k] == null; });
+    var known = Object.keys(f).filter(function (k) { return f[k] != null; });
+    function score(vals) { return Math.round(100 * (0.65 * Math.min.apply(null, vals) + 0.35 * mean(vals))); }
+    // Partial score uses observed factors only; bounds are scenarios, not confidence intervals.
+    var S = score(known.map(function (k) { return f[k]; }));
+    var lower = score(Object.keys(f).map(function (k) { return f[k] == null ? 0 : f[k]; }));
+    var upper = score(Object.keys(f).map(function (k) { return f[k] == null ? 1 : f[k]; }));
+    var lim = known.sort(function (a, b) { return f[a] - f[b]; })[0];
     var irrUse = (irrigation && crop.irr !== 'no') ? Math.max(0, crop.wn - st.eff) : 0;
-    return { S: S, f: f, lim: f[lim] < 0.95 ? lim : null, st: st, irrUse: irrUse, needsIrr: needsIrr };
+    return { S: S, lower: lower, upper: upper, unknown: unknown, f: f, lim: f[lim] < 0.95 ? lim : null, st: st, irrUse: irrUse, needsIrr: needsIrr };
   }
 
   var LIMFARM = {
@@ -871,7 +885,7 @@ function applySoil() {
   else if (t === 'auto') S.soil = S.soilSat ? { ph: S.soilSat.ph, clay: S.soilSat.clay } : { ph: null, clay: null };
   if (t !== 'ozel') { $('ph').value = S.soil.ph != null ? (+S.soil.ph).toFixed(1) : ''; $('clay').value = S.soil.clay != null ? Math.round(S.soil.clay) : ''; }
   const autoOpt = $('soilType').querySelector('[value=auto]'), c = soilClass(S.soilSat);
-  autoOpt.textContent = c ? `Bilmiyorum (uydu tahmini: ${SOIL[c].n})` : 'Bilmiyorum (uydudan tahmin)';
+  autoOpt.textContent = c ? `Bilmiyorum (SoilGrids tahmini: ${SOIL[c].n})` : 'Bilmiyorum (SoilGrids tahmini)';
 }
 
 // ---------- Goals ----------
@@ -881,7 +895,7 @@ const GOALS = {
   toprak: { pW: 40, pS: 95, pI: 30, dT: 0, dP: 0, legume: 1 },
   denge: { pW: 50, pS: 50, pI: 50, dT: 0, dP: 0, legume: 0 }
 };
-const GOALN = { su: 'suyum kıt', gelir: 'en çok kazandıran', toprak: 'toprağı dinlendir', denge: 'dengeli' };
+const GOALN = { su: 'suyum kıt', gelir: 'pazar önceliği', toprak: 'toprağı dinlendir', denge: 'dengeli' };
 function setGoal(g) {
   S.goal = g;
   document.querySelectorAll('.goal').forEach(b => b.setAttribute('aria-pressed', b.dataset.goal === g));
@@ -1005,7 +1019,7 @@ async function fetchAll(lat, lon) {
   S.demo = false; $('demoNote').hidden = true;
   S.data = FS.parsePower(pw.value);
   if (so.status === 'fulfilled' && so.value.ph != null) { S.soilSat = so.value; applySoil(); $('soilNote').textContent = `SoilGrids tahmini (0–30 cm): pH ${so.value.ph.toFixed(1)}, kil %${fmt(so.value.clay)}, organik karbon ${fmt(so.value.soc, 1)} g/kg. Toprak analizin varsa onu gir.`; }
-  else { S.soilSat = null; applySoil(); $('soilNote').textContent = 'SoilGrids yanıt vermedi; pH ve kili elle gir (boş bırakılırsa toprak kısıtı uygulanmaz).'; }
+  else { S.soilSat = null; applySoil(); $('soilNote').textContent = 'SoilGrids yanıt vermedi; pH ve kili elle gir (boş bırakılırsa sonuç eksik veriyle ön değerlendirmedir).'; }
   S.ndvi = nd.status === 'fulfilled' ? nd.value : [];
   const miss = [so.status !== 'fulfilled' && 'toprak', nd.status !== 'fulfilled' && 'uydu yeşilliği'].filter(Boolean);
   status(miss.length ? `Plan hazır; ${miss.join(' ve ')} verisi olmadan hesaplandı.` : 'Plan hazır.', 'ok');
@@ -1047,6 +1061,11 @@ function compute(scroll) {
   S.last = { P, ss, irr };
   $('skeleton').hidden = true;
   BANDS.forEach(id => { const el = $(id); if (el.hidden) { el.hidden = false; el.classList.add('enter'); } });
+  const missingSoil = S.soil.ph == null || S.soil.clay == null;
+  $('evidenceNote').textContent = (S.demo ? 'Sentetik örnek; gerçek tarla ölçümü değildir. ' : 'Model önerisi; sahada doğrulanmış sonuç değildir. ') +
+    (missingSoil ? 'Toprak verisi eksik: sıralama yalnızca bilinen faktörlere dayanır. Puan aralığı, bilinmeyen faktörlerin en kötü/en iyi durumunu gösterir; güven aralığı değildir. ' : 'Toprak değerleri seçilen kaynağa veya kullanıcı girişine dayanır. ') +
+    (irr ? 'Sulama ihtiyacının tamamen karşılanabildiği varsayılır; su kapasitesi ve sulama kayıpları hesaplanmaz. ' : '') +
+    'Tasarruflar varsayımsal karşılaştırmadır; gerçekleşmiş kazanç değildir.';
   renderTrans(ss);
   renderPlans(P, ss, irr);
   renderImpact(P, ss, irr);
@@ -1065,6 +1084,7 @@ function needMm(c, s) { return Math.max(0, c.wn - s.st.eff); }
 function badge(c, s, irr) {
   if (c.id === 'nadas') return { k: 'nil', t: 'Nadas' };
   if (c.irr === 'yes' && !irr) return { k: 'no', t: 'Ekilmez: sulama şart' };
+  if (s.unknown.length) return { k: 'risk', t: `Eksik veri: ${s.lower}–${s.upper}/100` };
   if (s.S < 30) return { k: 'no', t: 'Ekilmez' };
   if (s.S < 60) { const why = { water: 'su ister', heat: 'kavrulur', cold: 'don vurur', temp: 'iklim uymuyor', ph: 'toprak uymuyor', tex: 'toprak ağır' }[s.lim] || 'verim düşük'; return { k: 'risk', t: `Riskli: ${why}` }; }
   if (s.irrUse > 0) return { k: 'ok', t: 'Uygun, su ister' };
@@ -1141,14 +1161,14 @@ function renderImpact(P, ss, irr) {
   const uLo = Math.round(dC * nLo / 0.46), uHi = Math.round(dC * nHi / 0.46);
   const stat = (t, v, sub, k, good) => `<div class="stat"><div class="stat__t">${t}</div><div class="stat__v num ${good ? 'good' : ''}" data-k="imp-${k}">${v}</div><div class="stat__s">${sub}</div></div>`;
   let h = dC > 0
-    ? stat('Gübre tasarrufu', `${fmtN(uLo * area)}–${fmtN(uHi * area)} kg`, `üre${urea ? ` · ≈ ${fmtN(uLo * area * urea)}–${fmtN(uHi * area * urea)} ₺` : ''} · bakliyat azotu`, 'n', true)
-    : stat('Gübre tasarrufu', '0 kg', 'Daha fazlası için “Toprağı dinlendir” hedefini seç', 'n');
+    ? stat('Tahmini gübre farkı', `${fmtN(uLo * area)}–${fmtN(uHi * area)} kg`, `üre${urea ? ` · ≈ ${fmtN(uLo * area * urea)}–${fmtN(uHi * area * urea)} ₺` : ''} · bakliyat azotu`, 'n', true)
+    : stat('Tahmini gübre farkı', '0 kg', 'Daha fazlası için “Toprağı dinlendir” hedefini seç', 'n');
   const waterOf = seq => seq.reduce((t, c) => t + (irr && c.irr !== 'no' && ss[c.id] ? ss[c.id].irrUse : 0), 0);
   const dW = (waterOf(B.seq) - top.water) * area;
   h += irr
     ? stat('Sulama suyu', dW > 0 ? `${fmtN(dW)} m³ az` : dW < 0 ? `${fmtN(-dW)} m³ fazla` : 'Aynı', `Plan toplamı ${fmtN(top.water * area)} m³ · ${suText(top.water) || 'sulama gerekmez'}`, 'w', dW > 0)
-    : stat('Sulama suyu', '0 m³', 'Plandaki ürünler yağmurla yetişir', 'w');
-  h += stat('Hastalık zinciri', `${sP.breaks}× kırılır`, `Karşılaştırmada ${sB.breaks}× · pas ve kök çürüklüğü azalır`, 'd', sP.breaks > sB.breaks);
+    : stat('Sulama suyu', '0 m³', 'Sulama tanımlanmadı; yağış yeterliliğini kontrol edin', 'w');
+  h += stat('Tahıl dışı geçiş', `${sP.breaks} geçiş`, `Karşılaştırmada ${sB.breaks}× · hastalık azalması ölçülmedi`, 'd', sP.breaks > sB.breaks);
   const nadasB = B.seq.filter(c => c.id === 'nadas').length, nadasP = top.seq.filter(c => c.id === 'nadas').length;
   h += nadasB > nadasP
     ? stat('Hasat alınan yıl', `+${nadasB - nadasP} yıl`, `Nadas ${nadasB} yıldan ${nadasP} yıla iner`, 'y', true)
@@ -1187,6 +1207,7 @@ function renderPlans(P, ss, irr) {
   const sub = [];
   if ($('next').value) sub.push(`1. yıl senin seçimin: ${top.seq[0].n}`);
   if (irr) sub.push(`${n} yılda toplam sulama: ${suText(top.water) || 'gerekmez'}`);
+  if (top.seq.some(c => ss[c.id] && ss[c.id].unknown.length)) sub.push('Eksik toprak verisiyle ön sıralama');
   sub.push(`<span class="eng-only">plan puanı ${top.total.toFixed(0)} · ort. uygunluk ${top.base.toFixed(0)}/100${irr ? ` · sulama ≈ ${Math.round(top.water)} mm` : ''}</span>`);
   $('planSub').innerHTML = sub.join(' · ');
   $('planYears').innerHTML = top.seq.map((c, k) => `<li class="yr"><span class="yr__n">${k + 1}. yıl · ${c.s === 'K' ? 'güzlük' : c.s === 'Y' ? 'yazlık' : 'dinlenme'}</span><span class="yr__crop">${c.n}</span><span class="yr__grp">${grp(c)}</span>${c.id === 'nadas' ? '' : bdg(badge(c, ss[c.id], irr))}<span class="raw eng-only">uygunluk ${c.id === 'nadas' ? '–' : ss[c.id].S}</span></li>`).join('');
@@ -1208,7 +1229,7 @@ function renderSuit(sb, sr, ss) {
     const suCell = c.irr === 'no' ? (su ? `Yağmurla yetişir; kurak yılda ${su} iyi gelir` : 'Yağmurla yetişir') : su ? (irr ? su : `${su} · <span class="down">suyun yok</span>`) : 'Yağmur yeter';
     return `<tr><td data-l="Ürün"><b>${c.n}</b><div class="sub">${grp(c)} · ${c.s === 'K' ? 'güzlük' : 'yazlık'}</div></td>
       <td data-l="Durum">${bdg(bd)}</td>
-      <td data-l="Neden?">${s.lim ? FS.LIMFARM[s.lim] : 'Belirgin sorun yok'}<div class="raw eng-only">${s.lim ? FS.LIMTXT[s.lim] : ''}</div></td>
+      <td data-l="Neden?">${s.lim ? FS.LIMFARM[s.lim] : (s.unknown.length ? 'Toprak analizi gerekli' : 'Modelde belirgin kısıt yok')}<div class="raw eng-only">${s.lim ? FS.LIMTXT[s.lim] : ''}</div></td>
       <td data-l="Su ihtiyacı">${suCell}<div class="raw eng-only">${need ? Math.round(need) + ' mm' : ''}</div></td>
       <td class="n eng-only" data-l="2001–10">${a}</td><td class="n eng-only" data-l="Son 10 yıl"><span style="display:inline-flex;gap:4px;align-items:center">${arrow}${b}</span></td>
       <td class="eng-only" data-l="Senaryo"><div style="display:flex;gap:var(--s2);align-items:center"><div class="bar"><i style="width:${s.S}%;background:${color(s.S)}"></i></div><b class="num" style="min-width:2ch;text-align:right">${s.S}</b></div></td>
