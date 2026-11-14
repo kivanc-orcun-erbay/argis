@@ -1,0 +1,1358 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>FieldShift — NASA iklim verisiyle münavebe planı</title>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Overpass:wght@400;600;700;800&family=Red+Hat+Mono:wght@500&display=swap" rel="stylesheet">
+<style>
+/* =========================================================
+   FieldShift design system
+   One family (Overpass) for all text; Red Hat Mono only for
+   coordinates and raw NASA parameter codes. One accent (crop
+   green) for the CTA and the active state; rain and heat are
+   chart series only; ok / warn / bad are status only.
+   ========================================================= */
+:root{
+  color-scheme: light;
+  /* neutrals */
+  --bg:#f6f5ef; --surface:#ffffff; --surface-2:#eeede5;
+  --line:#dddcd2; --line-strong:#c3c4b7;
+  --ink:#13212a; --ink-2:#36454d; --ink-3:#56646a;   /* ink-3 on bg = 5.6:1 */
+  /* accent */
+  --accent:#2e7529; --accent-hover:#25621f; --accent-ink:#ffffff; --accent-soft:#e2eedd;
+  /* data series */
+  --rain:#2a6d8c; --heat:#a04e16;
+  /* status (text colours meet 4.5:1 on their -bg) */
+  --ok:#256a20; --ok-bg:#e1eedc; --warn:#7d4c00; --warn-bg:#f7ead0; --bad:#9e261b; --bad-bg:#f7e0dc;
+
+  /* spacing — 4px base */
+  --s1:4px; --s2:8px; --s3:12px; --s4:16px; --s5:24px; --s6:32px; --s7:48px; --s8:64px;
+  /* radius — nested radius = outer − padding */
+  --r-lg:16px; --r-md:12px; --r-sm:8px; --r-xs:4px; --r-pill:999px;
+  --pad-tight:4px;
+  --r-in-md:calc(var(--r-md) - var(--pad-tight));   /* 8 */
+  --r-in-lg:calc(var(--r-lg) - var(--pad-tight));   /* 12 */
+
+  /* type scale */
+  --f-xs:12px; --f-sm:14px; --f-md:16px; --f-lg:18px; --f-xl:22px; --f-2xl:28px; --f-3xl:40px;
+  --font:"Overpass",system-ui,sans-serif;
+  --mono:"Red Hat Mono",ui-monospace,monospace;
+
+  /* motion */
+  --ease-out:cubic-bezier(.16,1,.3,1);
+  --t-fast:120ms; --t-med:220ms;
+}
+@media (prefers-color-scheme: dark){
+  :root{
+    color-scheme: dark;
+    --bg:#0d181e; --surface:#13232b; --surface-2:#1a2e37;
+    --line:#26404b; --line-strong:#38535f;
+    --ink:#e6eeea; --ink-2:#c3d1cf; --ink-3:#9aadae;
+    --accent:#6cc463; --accent-hover:#82d27a; --accent-ink:#0a2508; --accent-soft:#1b361a;
+    --rain:#5aa8cb; --heat:#e38b4c;
+    --ok:#86d47e; --ok-bg:#1b361a; --warn:#f1b65c; --warn-bg:#382a10; --bad:#f39185; --bad-bg:#3b1b18;
+  }
+}
+
+*{box-sizing:border-box;min-width:0}
+[hidden]{display:none!important}
+html{-webkit-text-size-adjust:100%}
+body{margin:0;background:var(--bg);color:var(--ink);font:400 var(--f-md)/1.5 var(--font);overflow-x:clip;-webkit-font-smoothing:antialiased}
+h1,h2,h3,p{margin:0}
+h1{font-size:var(--f-xl);line-height:1.1;font-weight:800;letter-spacing:-.01em}
+h2{font-size:var(--f-xl);line-height:1.25;font-weight:700;letter-spacing:-.005em;text-wrap:balance}
+h3{font-size:var(--f-md);line-height:1.35;font-weight:700}
+a{color:var(--rain)}
+.num,table,.stat__v,svg text,output{font-variant-numeric:tabular-nums lining-nums}
+.mono{font-family:var(--mono);font-size:.875em}
+.muted{color:var(--ink-3)}
+.sm{font-size:var(--f-sm)}
+.xs{font-size:var(--f-xs)}
+
+/* icons — one set, one stroke weight, one size per context */
+.i{width:20px;height:20px;flex:none;stroke:currentColor;fill:none;stroke-width:1.75;stroke-linecap:round;stroke-linejoin:round}
+.i--sm{width:16px;height:16px}
+
+/* view modes */
+body:not(.eng) .eng-only{display:none!important}
+body.eng .farm-only{display:none!important}
+
+/* ---------- header ---------- */
+.hdr{display:flex;align-items:center;gap:var(--s4);flex-wrap:wrap;padding:var(--s4) clamp(16px,3vw,40px);border-bottom:1px solid var(--line);background:var(--surface)}
+.hdr p{color:var(--ink-3);font-size:var(--f-sm)}
+.seg-ctl{margin-left:auto;display:inline-flex;padding:var(--pad-tight);gap:2px;background:var(--surface-2);border-radius:var(--r-md)}
+.seg-ctl button{min-height:36px;padding:0 var(--s4);border:0;border-radius:var(--r-in-md);background:transparent;color:var(--ink-2);font:600 var(--f-sm) var(--font);cursor:pointer;transition:background var(--t-fast),color var(--t-fast)}
+.seg-ctl button[aria-pressed=true]{background:var(--surface);color:var(--ink);box-shadow:0 0 0 1px var(--line)}
+
+/* ---------- how it works ---------- */
+.how{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:var(--s5);padding:var(--s4) clamp(16px,3vw,40px);border-bottom:1px solid var(--line)}
+.how li{display:flex;gap:var(--s3);font-size:var(--f-sm);color:var(--ink-3);list-style:none}
+.how b{display:block;color:var(--ink);font-size:var(--f-sm)}
+.how .n{font-weight:800;color:var(--accent);line-height:1.45}
+.how ol{display:contents}
+
+/* ---------- workbench ---------- */
+.top{display:grid;grid-template-columns:minmax(0,1.45fr) minmax(360px,1fr);min-height:680px}
+#map{min-height:680px;height:100%;background:var(--surface-2)}
+.panel{background:var(--surface);border-left:1px solid var(--line);padding:var(--s5);display:flex;flex-direction:column;gap:var(--s6)}
+.group{display:flex;flex-direction:column;gap:var(--s3)}
+.group > h3{font-size:var(--f-sm);color:var(--ink-3);font-weight:700}
+.row{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:var(--s3)}
+.field{display:flex;flex-direction:column;gap:6px}
+.field > label,.lbl{font-size:var(--f-sm);font-weight:600;color:var(--ink-2)}
+input,select,button{font:inherit;color:inherit}
+input[type=number],select{width:100%;min-height:44px;padding:0 var(--s3);border:1px solid var(--line-strong);border-radius:var(--r-sm);background:var(--bg);font-size:var(--f-md);transition:border-color var(--t-fast)}
+input[type=number]{font-variant-numeric:tabular-nums}
+input[type=number]:hover,select:hover{border-color:var(--ink-3)}
+input[type=range]{width:100%;accent-color:var(--accent)}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+
+.chips{display:flex;flex-wrap:wrap;gap:var(--s2)}
+.pbtn{display:inline-flex;align-items:center;gap:6px;min-height:36px;padding:0 var(--s3);border:1px solid var(--line-strong);border-radius:var(--r-pill);background:var(--surface);font-size:var(--f-sm);font-weight:600;cursor:pointer;transition:border-color var(--t-fast),background var(--t-fast)}
+.pbtn:hover{border-color:var(--ink-3)}
+.pbtn[aria-pressed=true]{border-color:var(--accent);background:var(--accent-soft);color:var(--ink)}
+.pbtn .i{margin-left:-2px}                       /* optical: icon side looks heavier */
+.trans{font-size:var(--f-sm);color:var(--ink-2)}
+.trans:empty{display:none}
+
+.choice{display:grid;grid-template-columns:1fr 1fr;gap:var(--s2)}
+.opt{display:flex;align-items:flex-start;gap:var(--s3);padding:var(--s3);border:1px solid var(--line-strong);border-radius:var(--r-md);background:var(--surface);cursor:pointer;text-align:left;transition:border-color var(--t-fast),background var(--t-fast)}
+.opt:hover{border-color:var(--ink-3)}
+.opt b{display:block;font-size:var(--f-sm);font-weight:700;line-height:1.3}
+.opt small{display:block;font-size:var(--f-xs);color:var(--ink-3);line-height:1.35;margin-top:2px}
+.opt .i{color:var(--ink-3);margin-top:-1px}
+.opt:has(input:checked),.opt[aria-pressed=true]{border-color:var(--accent);background:var(--accent-soft);box-shadow:inset 0 0 0 1px var(--accent)}
+.opt[aria-pressed=true] .i,.opt:has(input:checked) .i{color:var(--accent)}
+.opt input{margin:2px 0 0;accent-color:var(--accent)}
+
+.tune{display:flex;flex-direction:column;gap:var(--s3);padding:var(--s4);background:var(--bg);border-radius:var(--r-md)}
+.tune .lbl{display:flex;justify-content:space-between}
+.tune output{font-weight:700;color:var(--ink)}
+
+/* CTA */
+.cta-wrap{display:flex;flex-direction:column;gap:var(--s3);margin-top:auto;padding-top:var(--s2)}
+.cta{display:flex;align-items:center;justify-content:center;gap:var(--s2);width:100%;min-height:56px;padding:0 var(--s5);border:0;border-radius:var(--r-md);background:var(--accent);color:var(--accent-ink);font-size:var(--f-lg);font-weight:800;cursor:pointer;transition:background var(--t-fast),transform var(--t-fast)}
+.cta:hover{background:var(--accent-hover)}
+.cta:active{transform:scale(.985)}
+.cta .i{margin-right:-4px}                        /* optical: arrow sits tight to label */
+.cta:disabled{cursor:progress;opacity:.85}
+.linkbtn{align-self:center;border:0;background:none;color:var(--ink-2);font-size:var(--f-sm);font-weight:600;text-decoration:underline;text-underline-offset:3px;cursor:pointer;padding:var(--s1) var(--s2)}
+.linkbtn:hover{color:var(--ink)}
+#status{font-size:var(--f-sm);color:var(--ink-3);min-height:20px;text-align:center}
+#status .ok{color:var(--ok)} #status .err{color:var(--bad)}
+.sources{display:flex;justify-content:center;flex-wrap:wrap;gap:var(--s4);margin:0;padding:0;list-style:none;font-size:var(--f-xs);color:var(--ink-3)}
+.sources li{display:inline-flex;align-items:center;gap:6px}
+.sources li[data-state=ok]{color:var(--ok)} .sources li[data-state=err]{color:var(--bad)}
+.notice{display:flex;gap:var(--s2);align-items:flex-start;padding:var(--s3);border-radius:var(--r-sm);background:var(--warn-bg);color:var(--warn);font-size:var(--f-sm);font-weight:600}
+
+/* spinner */
+.spin{display:inline-block;width:16px;height:16px;flex:none;border:2px solid currentColor;border-right-color:transparent;border-radius:50%;animation:sp .8s linear infinite}
+@keyframes sp{to{transform:rotate(360deg)}}
+
+/* ---------- result bands ---------- */
+#results{transition:opacity var(--t-med)}
+#results.is-stale{opacity:.45;pointer-events:none}
+.band{padding:var(--s7) clamp(16px,3vw,40px);border-top:1px solid var(--line)}
+.band > header{display:flex;flex-direction:column;gap:var(--s2);margin-bottom:var(--s5);max-width:72ch}
+.eyebrow{font-size:var(--f-sm);font-weight:600;color:var(--ink-3)}
+.lead{font-size:var(--f-lg);line-height:1.55;color:var(--ink-2);max-width:72ch}
+.lead b{color:var(--ink)}
+.grid4{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:var(--s4)}
+.grid3{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:var(--s4)}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:var(--r-lg);padding:var(--s5);display:flex;flex-direction:column;gap:var(--s2)}
+.card__t{font-size:var(--f-sm);font-weight:600;color:var(--ink-3)}
+.card__src{margin-top:auto;padding-top:var(--s3);font-size:var(--f-xs);color:var(--ink-3)}
+.raw{font-family:var(--mono);font-size:var(--f-xs);color:var(--ink-3)}
+
+/* status pill: dot + text, semantic colour only */
+.st{display:inline-flex;align-items:center;gap:6px;padding:2px 10px 2px 8px;border-radius:var(--r-pill);font-size:var(--f-xs);font-weight:700;white-space:nowrap;line-height:20px}
+.st::before{content:"";width:6px;height:6px;border-radius:50%;background:currentColor}
+.st--ok{background:var(--ok-bg);color:var(--ok)}
+.st--risk{background:var(--warn-bg);color:var(--warn)}
+.st--no{background:var(--bad-bg);color:var(--bad)}
+.st--nil{background:var(--surface-2);color:var(--ink-2)}
+.state{font-size:var(--f-xl);font-weight:800;line-height:1.2}
+.state.ok{color:var(--ok)} .state.risk{color:var(--warn)} .state.no{color:var(--bad)}
+
+/* ---------- HERO: the recommendation (main feature) ---------- */
+.hero{background:var(--surface);border-top:0}
+.hero-title{font-size:clamp(28px,4.2vw,var(--f-3xl));line-height:1.1;font-weight:800;letter-spacing:-.02em;color:var(--ink)}
+.hero-title .arr{color:var(--accent);font-weight:600;padding:0 .15em}
+.hero-grid{display:grid;grid-template-columns:minmax(0,1.35fr) minmax(0,1fr);gap:var(--s6);align-items:start}
+.years{display:grid;grid-auto-flow:column;grid-auto-columns:minmax(0,1fr);gap:var(--pad-tight);margin:0;padding:var(--pad-tight);list-style:none;background:var(--surface-2);border-radius:var(--r-lg)}
+.yr{display:flex;flex-direction:column;gap:6px;padding:var(--s4);background:var(--surface);border-radius:var(--r-in-lg);min-height:150px}
+.yr__n{font-size:var(--f-xs);font-weight:700;color:var(--ink-3)}
+.yr__crop{font-size:var(--f-xl);font-weight:800;line-height:1.15}
+.yr__grp{font-size:var(--f-xs);color:var(--ink-3);line-height:1.35}
+.yr .st{align-self:flex-start;margin-top:auto}
+.why{margin:var(--s5) 0 0;padding:0;list-style:none;display:flex;flex-direction:column;gap:var(--s2)}
+.why li{display:flex;gap:var(--s3);align-items:flex-start;font-size:var(--f-sm);color:var(--ink-2)}
+.why .i{margin-top:1px}
+.why .pos{color:var(--ok)} .why .neg{color:var(--bad)} .why .neu{color:var(--ink-3)}
+.why .pts{min-width:32px;text-align:right;font-weight:700;font-variant-numeric:tabular-nums}
+.stats{display:grid;grid-template-columns:1fr 1fr;gap:var(--s5) var(--s4)}
+.stat{display:flex;flex-direction:column;gap:2px}
+.stat__t{font-size:var(--f-sm);font-weight:600;color:var(--ink-3)}
+.stat__v{font-size:var(--f-2xl);font-weight:800;line-height:1.15;color:var(--ink);letter-spacing:-.01em}
+.stat__v.good{color:var(--ok)}
+.stat__s{font-size:var(--f-xs);color:var(--ink-3);line-height:1.4}
+.actions{display:flex;flex-wrap:wrap;gap:var(--s2);margin-top:var(--s5)}
+.btn{display:inline-flex;align-items:center;gap:var(--s2);min-height:40px;padding:0 var(--s4) 0 14px;border:1px solid var(--line-strong);border-radius:var(--r-sm);background:var(--surface);font-size:var(--f-sm);font-weight:700;cursor:pointer;transition:border-color var(--t-fast),background var(--t-fast)}
+.btn:hover{border-color:var(--ink-3);background:var(--bg)}
+.alts-h{margin:var(--s7) 0 var(--s4);font-size:var(--f-md)}
+.alt__seq{font-size:var(--f-lg);font-weight:800;line-height:1.3}
+.alt .why{margin-top:var(--s2)}
+.cmp{margin-top:var(--s4);display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:var(--s3);max-width:640px}
+
+/* shift */
+.shift-seq{font-size:var(--f-lg);font-weight:700;line-height:1.3}
+.shift-seq.now{color:var(--accent)}
+.chg{margin:0;padding:0;list-style:none;font-size:var(--f-sm)}
+.chg li{display:flex;flex-wrap:wrap;align-items:center;gap:6px;padding:var(--s2) 0;border-top:1px solid var(--line)}
+.chg li:first-child{border-top:0}
+.chg b{margin-right:auto}
+.card__t .i{vertical-align:-4px;margin-right:4px}
+
+/* table */
+.scroll{overflow-x:auto;border:1px solid var(--line);border-radius:var(--r-lg);background:var(--surface)}
+table{width:100%;border-collapse:collapse;font-size:var(--f-sm)}
+th{font-size:var(--f-xs);font-weight:700;color:var(--ink-3);text-align:left;padding:var(--s3) var(--s4);border-bottom:1px solid var(--line);white-space:nowrap}
+td{padding:var(--s3) var(--s4);border-bottom:1px solid var(--line);vertical-align:top}
+tr:last-child td{border-bottom:0}
+td.n,th.n{text-align:right;white-space:nowrap}
+td .sub{font-size:var(--f-xs);color:var(--ink-3)}
+.bar{height:6px;border-radius:var(--r-pill);background:var(--surface-2);overflow:hidden;min-width:64px;flex:1}
+.bar i{display:block;height:100%;border-radius:inherit;transition:width var(--t-med) var(--ease-out)}
+.up{color:var(--ok)} .down{color:var(--bad)}
+.inc{width:64px!important;min-height:36px!important;padding:0 var(--s2)!important;text-align:center}
+.foot{margin-top:var(--s3);font-size:var(--f-sm);color:var(--ink-3);max-width:80ch}
+
+/* charts */
+.figs{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:var(--s4);margin-top:var(--s4)}
+#cards{grid-template-columns:repeat(auto-fit,minmax(170px,1fr))}
+@media (max-width:760px){.figs{grid-template-columns:1fr}}
+.fig{position:relative;min-height:280px;background:var(--surface);border:1px solid var(--line);border-radius:var(--r-lg);color:var(--ink-2)}
+.fig > svg{position:absolute;inset:0;width:100%;height:100%;touch-action:pan-y;cursor:crosshair}
+.fig .cap{position:absolute;left:var(--s4);right:var(--s4);top:var(--s3);font-size:var(--f-sm);font-weight:600;color:var(--ink-2);z-index:1;display:flex;flex-wrap:wrap;gap:4px var(--s3);align-items:center}
+.key{display:inline-flex;align-items:center;gap:6px;font-size:var(--f-xs);font-weight:600;color:var(--ink-3)}
+.key i{width:10px;height:10px;border-radius:2px;display:inline-block}
+.key i.ln{height:2px;border-radius:0}
+#tip{position:fixed;z-index:1000;pointer-events:none;display:none;background:var(--ink);color:var(--bg);padding:var(--s2) var(--s3);border-radius:var(--r-sm);font-size:var(--f-xs);line-height:1.45;white-space:nowrap;font-variant-numeric:tabular-nums}
+
+/* method / sources */
+.prose{max-width:80ch;display:flex;flex-direction:column;gap:var(--s4)}
+.prose h3{margin-top:var(--s4)}
+.prose ul{margin:0;padding-left:20px;display:flex;flex-direction:column;gap:var(--s2);font-size:var(--f-sm);color:var(--ink-2)}
+.prose p{font-size:var(--f-sm);color:var(--ink-2)}
+.src{font-size:var(--f-sm);color:var(--ink-3)}
+
+/* ---------- loading: skeleton ---------- */
+.sk{background:linear-gradient(90deg,var(--surface-2) 0%,var(--line) 50%,var(--surface-2) 100%);background-size:200% 100%;border-radius:var(--r-sm);animation:shimmer 1.4s linear infinite}
+@keyframes shimmer{to{background-position:-200% 0}}
+.sk--eyebrow{width:180px;height:14px}
+.sk--title{width:min(560px,90%);height:40px;margin-top:var(--s3)}
+.sk-row{display:grid;grid-template-columns:repeat(3,1fr);gap:var(--s2);margin-top:var(--s5);max-width:720px}
+.sk--tile{height:150px;border-radius:var(--r-in-lg)}
+
+/* ---------- feedback motion ---------- */
+.enter{animation:enter var(--t-med) var(--ease-out) both}
+@keyframes enter{from{opacity:0;transform:translateY(8px)}}
+.flash{animation:flash 900ms var(--ease-out)}
+@keyframes flash{0%{background:var(--accent-soft);box-shadow:0 0 0 4px var(--accent-soft)}100%{background:transparent;box-shadow:0 0 0 4px transparent}}
+#toast{position:fixed;left:50%;bottom:var(--s5);transform:translate(-50%,16px);opacity:0;z-index:1001;display:flex;align-items:center;gap:var(--s2);padding:var(--s3) var(--s4);border-radius:var(--r-md);background:var(--ink);color:var(--bg);font-size:var(--f-sm);font-weight:600;pointer-events:none;transition:opacity var(--t-med),transform var(--t-med) var(--ease-out)}
+#toast.show{opacity:1;transform:translate(-50%,0)}
+@media (prefers-reduced-motion: reduce){
+  *,*::before,*::after{animation-duration:1ms!important;animation-iteration-count:1!important;transition-duration:1ms!important}
+  .spin{animation:sp 2.4s linear infinite!important}
+}
+
+/* ---------- responsive ---------- */
+@media (max-width:1000px){
+  .top{grid-template-columns:1fr}
+  #map{min-height:360px;height:360px}
+  .panel{border-left:0;border-top:1px solid var(--line)}
+  .hero-grid{grid-template-columns:1fr}
+}
+@media (max-width:700px){
+  .how{grid-template-columns:1fr;gap:var(--s3)}
+  .years{grid-auto-flow:row}
+  .yr{min-height:0}
+  .sk-row{grid-template-columns:1fr}
+}
+@media (max-width:480px){
+  .choice,.row,.cmp{grid-template-columns:1fr}
+  .seg-ctl{margin-left:0;width:100%}
+  .seg-ctl button{flex:1}
+  .stats{grid-template-columns:1fr}
+}
+@media (max-width:640px){
+  table{font-size:13px}
+  .stack thead{display:none}
+  .stack tr{display:grid;padding:var(--s2) 0;border-bottom:1px solid var(--line)}
+  .stack td{display:flex;justify-content:space-between;gap:var(--s3);border:0;padding:4px var(--s4)}
+  .stack td::before{content:attr(data-l);color:var(--ink-3);font-size:var(--f-xs)}
+}
+@media print{
+  .top,.how,.seg-ctl,.actions,#suitBand input,#soilBand,#climBand,#toast{display:none!important}
+  .band{break-inside:avoid;padding:12px 0}
+  body{background:#fff;color:#000}
+}
+</style>
+</head>
+<body>
+
+<!-- Icon set: single stroke family, 24px grid, 1.75 stroke -->
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <symbol id="i-pin" viewBox="0 0 24 24"><path d="M20 10c0 5-5.5 10.2-7.4 11.8a1 1 0 0 1-1.2 0C9.5 20.2 4 15 4 10a8 8 0 0 1 16 0"/><circle cx="12" cy="10" r="3"/></symbol>
+  <symbol id="i-locate" viewBox="0 0 24 24"><circle cx="12" cy="12" r="7"/><circle cx="12" cy="12" r="2"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3"/></symbol>
+  <symbol id="i-drop" viewBox="0 0 24 24"><path d="M12 22a7 7 0 0 0 7-7c0-2-1-3.9-3-5.5s-3.5-4-4-6.5c-.5 2.5-2 4.9-4 6.5C6 11.1 5 13 5 15a7 7 0 0 0 7 7z"/></symbol>
+  <symbol id="i-sun" viewBox="0 0 24 24"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></symbol>
+  <symbol id="i-coins" viewBox="0 0 24 24"><circle cx="8" cy="8" r="6"/><path d="M18.1 10.4A6 6 0 1 1 10.3 18"/><path d="M7 6h1v4"/><path d="m16.7 13.9.7.7-2.8 2.8"/></symbol>
+  <symbol id="i-sprout" viewBox="0 0 24 24"><path d="M7 20h10"/><path d="M10 20c5.5-2.5.8-6.4 3-10"/><path d="M9.5 9.4c1.1.8 1.8 2.2 2.3 3.7-2 .4-3.5.4-4.8-.3-1.2-.6-2.3-1.9-3-4.2 2.8-.5 4.4 0 5.5.8z"/><path d="M14.1 6a7 7 0 0 0-1.1 4c1.9-.1 3.3-.6 4.3-1.4 1-1 1.6-2.3 1.7-4.6-2.7.1-4 1-4.9 2z"/></symbol>
+  <symbol id="i-scale" viewBox="0 0 24 24"><path d="m16 16 3-8 3 8c-.9.6-1.9 1-3 1s-2.1-.4-3-1Z"/><path d="m2 16 3-8 3 8c-.9.6-1.9 1-3 1s-2.1-.4-3-1Z"/><path d="M7 21h10M12 3v18M3 7h2c2 0 5-1 7-2 2 1 5 2 7 2h2"/></symbol>
+  <symbol id="i-arrow" viewBox="0 0 24 24"><path d="M5 12h14M12 5l7 7-7 7"/></symbol>
+  <symbol id="i-share" viewBox="0 0 24 24"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><path d="m8.6 13.5 6.8 4M15.4 6.5l-6.8 4"/></symbol>
+  <symbol id="i-print" viewBox="0 0 24 24"><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><path d="M6 9V3h12v6"/><rect x="6" y="14" width="12" height="8" rx="1"/></symbol>
+  <symbol id="i-download" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M7 10l5 5 5-5M12 15V3"/></symbol>
+  <symbol id="i-up" viewBox="0 0 24 24"><path d="m22 7-8.5 8.5-5-5L2 17"/><path d="M16 7h6v6"/></symbol>
+  <symbol id="i-down" viewBox="0 0 24 24"><path d="m22 17-8.5-8.5-5 5L2 7"/><path d="M16 17h6v-6"/></symbol>
+  <symbol id="i-check" viewBox="0 0 24 24"><path d="M20 6 9 17l-5-5"/></symbol>
+  <symbol id="i-x" viewBox="0 0 24 24"><path d="M18 6 6 18M6 6l12 12"/></symbol>
+  <symbol id="i-alert" viewBox="0 0 24 24"><path d="m21.7 18-8-14a2 2 0 0 0-3.4 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.7-3"/><path d="M12 9v4M12 17h.01"/></symbol>
+  <symbol id="i-minus" viewBox="0 0 24 24"><path d="M5 12h14"/></symbol>
+</svg>
+
+<div id="tip" role="tooltip"></div>
+<div id="toast" role="status" aria-live="polite"></div>
+
+<header class="hdr">
+  <div>
+    <h1>FieldShift</h1>
+    <p>Tarlana göre münavebe planı · 25 yıllık NASA iklim ve uydu verisiyle</p>
+  </div>
+  <div class="seg-ctl" role="group" aria-label="Görünüm">
+    <button type="button" id="vFarm" aria-pressed="true">Çiftçi</button>
+    <button type="button" id="vEng" aria-pressed="false">Mühendis</button>
+  </div>
+</header>
+
+<section class="how" aria-label="Nasıl çalışır">
+  <ol>
+    <li><span class="n num">1</span><span><b>Tarlanı seç</b>Haritaya dokun, ova seç ya da konumunu bul.</span></li>
+    <li><span class="n num">2</span><span><b>NASA verisi okunur</b>2001'den bugüne yağış, sıcaklık, toprak nemi, uydu yeşilliği ve toprak.</span></li>
+    <li><span class="n num">3</span><span><b>Planını al</b>Ne ekeceğin, kaç su ister, gübreden ne kadar kazanırsın.</span></li>
+  </ol>
+</section>
+
+<section class="top">
+  <div id="map" role="application" aria-label="Tarla haritası"></div>
+
+  <div class="panel">
+    <div class="notice" id="demoNote" hidden><svg class="i i--sm"><use href="#i-alert"/></svg><span>Örnek tarla: veriler sentetiktir, gerçek ölçüm değildir.</span></div>
+
+    <div class="group">
+      <h3>Tarla</h3>
+      <div class="chips" id="presets">
+        <button type="button" class="pbtn" data-ll="37.8746,32.4932" aria-pressed="true">Konya Ovası</button>
+        <button type="button" class="pbtn" data-ll="36.8500,35.4000" aria-pressed="false">Çukurova</button>
+        <button type="button" class="pbtn" data-ll="36.8600,39.0300" aria-pressed="false">Harran</button>
+        <button type="button" class="pbtn" data-ll="41.4000,27.3500" aria-pressed="false">Trakya</button>
+        <button type="button" class="pbtn" id="geo"><svg class="i i--sm"><use href="#i-locate"/></svg><span>Konumumu bul</span></button>
+      </div>
+      <div class="row eng-only">
+        <div class="field"><label for="lat">Enlem</label><input type="number" id="lat" step="0.0001" value="37.8746" class="mono"></div>
+        <div class="field"><label for="lon">Boylam</label><input type="number" id="lon" step="0.0001" value="32.4932" class="mono"></div>
+      </div>
+      <div class="row">
+        <div class="field"><label for="prev">Geçen yıl ne ektin?</label><select id="prev"></select></div>
+        <div class="field"><label for="next">Bu yıl ne ekeceksin?</label><select id="next"></select></div>
+      </div>
+      <p class="trans" id="trans" aria-live="polite"></p>
+    </div>
+
+    <div class="group">
+      <h3>Koşullar</h3>
+      <div class="choice" role="radiogroup" aria-label="Su durumu">
+        <label class="opt"><input type="radio" name="wt" id="kirac" checked><span><b>Kıraç</b><small>Yalnızca yağmura bağlı</small></span></label>
+        <label class="opt"><input type="radio" name="wt" id="irr"><span><b>Sulu</b><small>Sulama suyum var</small></span></label>
+      </div>
+      <div class="row">
+        <div class="field"><label for="soilType">Toprak</label><select id="soilType">
+          <option value="auto">Bilmiyorum (uydudan tahmin)</option>
+          <option value="kumlu">Kumlu / süzek</option>
+          <option value="tinli">Tınlı / tavlı</option>
+          <option value="killi">Ağır / kara kepir (killi)</option>
+          <option value="kirecli">Kireçli / çorak</option>
+          <option value="ozel" hidden>Analiz değerleri (pH / kil)</option>
+        </select></div>
+        <div class="field"><label for="years">Plan süresi</label><select id="years"><option value="3">3 yıl</option><option value="2">2 yıl</option><option value="4">4 yıl</option></select></div>
+      </div>
+      <div class="row">
+        <div class="field"><label for="area">Alan (dekar)</label><input type="number" id="area" min="1" step="1" value="20"></div>
+        <div class="field"><label for="urea">Üre fiyatı (₺/kg)</label><input type="number" id="urea" min="0" step="0.5" placeholder="İsteğe bağlı"></div>
+      </div>
+    </div>
+
+    <div class="group">
+      <h3>Hedef</h3>
+      <div class="choice" role="group" aria-label="Hedef">
+        <button type="button" class="opt goal" data-goal="su" aria-pressed="false"><svg class="i"><use href="#i-drop"/></svg><span><b>Suyum kıt</b><small>Az su isteyen, kuraklığa dayanıklı</small></span></button>
+        <button type="button" class="opt goal" data-goal="gelir" aria-pressed="false"><svg class="i"><use href="#i-coins"/></svg><span><b>En çok kazandıran</b><small>Pazar değeri yüksek ürünler</small></span></button>
+        <button type="button" class="opt goal" data-goal="toprak" aria-pressed="false"><svg class="i"><use href="#i-sprout"/></svg><span><b>Toprağı dinlendir</b><small>Bakliyat ve fiğle gübre tasarrufu</small></span></button>
+        <button type="button" class="opt goal" data-goal="denge" aria-pressed="true"><svg class="i"><use href="#i-scale"/></svg><span><b>Dengeli</b><small>Su, toprak ve kazanç birlikte</small></span></button>
+      </div>
+      <div class="tune eng-only">
+        <div class="lbl sm"><span>Ağırlıklar <span id="goalTag" class="muted"></span></span></div>
+        <div class="field"><label class="lbl" for="pW"><span>Su</span><output id="vW">50</output></label><input type="range" id="pW" min="0" max="100" value="50"></div>
+        <div class="field"><label class="lbl" for="pS"><span>Toprak</span><output id="vS">50</output></label><input type="range" id="pS" min="0" max="100" value="50"></div>
+        <div class="field"><label class="lbl" for="pI"><span>Gelir</span><output id="vI">50</output></label><input type="range" id="pI" min="0" max="100" value="50"></div>
+        <div class="field"><label class="lbl" for="dT"><span>Senaryo: sıcaklık</span><output><span id="vT">+0.0</span> °C</output></label><input type="range" id="dT" min="0" max="3" step="0.5" value="0"></div>
+        <div class="field"><label class="lbl" for="dP"><span>Senaryo: yağış</span><output><span id="vP">0</span> %</output></label><input type="range" id="dP" min="-30" max="10" step="5" value="0"></div>
+      </div>
+    </div>
+
+    <div class="cta-wrap">
+      <button class="cta" id="go"><span>Münavebe planımı çıkar</span><svg class="i"><use href="#i-arrow"/></svg></button>
+      <ul class="sources" id="srcStatus" hidden aria-live="polite">
+        <li data-src="power"><span class="ind"></span>NASA POWER iklim</li>
+        <li data-src="modis"><span class="ind"></span>MODIS yeşillik</li>
+        <li data-src="soil"><span class="ind"></span>SoilGrids toprak</li>
+      </ul>
+      <div id="status" role="status" aria-live="polite">Tarlanı seç ve planını çıkar.</div>
+      <button class="linkbtn" id="demo" type="button">ya da örnek tarlayı göster</button>
+    </div>
+  </div>
+</section>
+
+<section class="band" id="skeleton" hidden aria-hidden="true">
+  <div class="sk sk--eyebrow"></div>
+  <div class="sk sk--title"></div>
+  <div class="sk-row"><div class="sk sk--tile"></div><div class="sk sk--tile"></div><div class="sk sk--tile"></div></div>
+</section>
+
+<div id="results">
+
+<section class="band hero" id="planBand" hidden>
+  <header>
+    <p class="eyebrow" id="planEyebrow">Önerilen münavebe</p>
+    <h2 class="hero-title" id="planTitle"></h2>
+    <p class="muted sm" id="planSub"></p>
+  </header>
+  <div class="hero-grid">
+    <div>
+      <ol class="years" id="planYears"></ol>
+      <ul class="why" id="planWhy"></ul>
+    </div>
+    <div>
+      <div class="stats" id="impCards"></div>
+      <p class="stat__s" id="impBase" style="margin-top:var(--s4)"></p>
+      <div class="cmp eng-only">
+        <div class="field"><label for="baseMode">Karşılaştırma</label><select id="baseMode">
+          <option value="trad">Bölgedeki yaygın uygulama</option>
+          <option value="mono">Önceki ürünü üst üste ekmek</option>
+        </select></div>
+        <div class="field"><label for="nLo">Azot kredisi (kg N/da)</label>
+          <div style="display:flex;gap:var(--s2)"><input type="number" id="nLo" min="0" max="15" step="0.5" value="3" aria-label="Alt"><input type="number" id="nHi" min="0" max="15" step="0.5" value="5" aria-label="Üst"></div></div>
+      </div>
+      <div class="actions">
+        <button class="btn" id="share"><svg class="i i--sm"><use href="#i-share"/></svg>Planı paylaş</button>
+        <button class="btn" id="print"><svg class="i i--sm"><use href="#i-print"/></svg>Yazdır / PDF</button>
+      </div>
+    </div>
+  </div>
+  <h3 class="alts-h">Diğer iki seçenek</h3>
+  <div class="grid3" id="plans"></div>
+</section>
+
+<section class="band" id="sumBand" hidden>
+  <header>
+    <p class="eyebrow">Tarlanın son 10 yılı</p>
+    <h2 id="sumTitle"></h2>
+  </header>
+  <p class="lead" id="lead" style="margin-bottom:var(--s5)"></p>
+  <div class="grid4" id="farmCards"></div>
+</section>
+
+<section class="band" id="shiftBand" hidden>
+  <header>
+    <p class="eyebrow" id="shiftEyebrow">20 yıl önceki iklim ile bugün</p>
+    <h2 id="shiftTitle"></h2>
+  </header>
+  <div class="grid3" id="shiftCards"></div>
+</section>
+
+<section class="band" id="suitBand" hidden>
+  <header>
+    <p class="eyebrow">Ürün uygunluğu</p>
+    <h2 id="suitTitle"></h2>
+  </header>
+  <div class="scroll">
+    <table class="stack" id="suitT"><thead><tr><th>Ürün</th><th>Durum</th><th>Neden?</th><th>Su ihtiyacı</th><th class="n eng-only">2001–10</th><th class="n eng-only">Son 10 yıl</th><th class="eng-only">Senaryo</th><th>Kazanç (1–5)</th></tr></thead><tbody></tbody></table>
+  </div>
+  <p class="foot">Bir salma/karık sulaması yaklaşık 70 mm kabul edilir; damlamada daha az su gider. Kazanç puanını kendi bölgendeki fiyatlara göre değiştir, plan hemen güncellenir.</p>
+  <p class="foot eng-only">Uygunluk eşikleri FAO EcoCrop aralıklarından ve Türkiye ekim takvimlerinden türetilmiş yaklaşık değerlerdir (0–100).</p>
+</section>
+
+<section class="band eng-only" id="climBand" hidden>
+  <header>
+    <p class="eyebrow">NASA POWER ve MODIS zaman serileri</p>
+    <h2 id="climTitle"></h2>
+  </header>
+  <div class="grid4" id="cards"></div>
+  <div class="figs">
+    <div class="fig" id="f1"><div class="cap">Yıllık yağış ve sıcaklık <span class="key"><i style="background:var(--rain);opacity:.6"></i>yağış mm</span><span class="key"><i class="ln" style="background:var(--heat)"></i>ort. °C</span></div><svg></svg></div>
+    <div class="fig" id="f2"><div class="cap">Aylık iklim <span class="key"><i style="background:var(--rain);opacity:.3"></i>ilk 10 yıl</span><span class="key"><i style="background:var(--rain);opacity:.8"></i>son 10 yıl</span></div><svg></svg></div>
+    <div class="fig" id="f3"><div class="cap">Kök bölgesi toprak nemi <span class="raw">GWETROOT 0–1</span></div><svg></svg></div>
+    <div class="fig" id="f4"><div class="cap">Bitki örtüsü <span class="raw">MOD13Q1 NDVI 250 m</span></div><svg></svg></div>
+  </div>
+</section>
+
+<section class="band eng-only" id="soilBand" hidden>
+  <header><p class="eyebrow">SoilGrids 2.0 (ISRIC)</p><h2>Toprak pH ve kil oranı</h2></header>
+  <div class="row" style="max-width:480px">
+    <div class="field"><label for="ph">pH</label><input type="number" id="ph" step="0.1"></div>
+    <div class="field"><label for="clay">Kil (%)</label><input type="number" id="clay" step="1"></div>
+  </div>
+  <p class="foot" id="soilNote"></p>
+  <div class="actions"><button class="btn" id="csv"><svg class="i i--sm"><use href="#i-download"/></svg>25 yıllık veriyi CSV indir</button></div>
+</section>
+
+</div>
+
+<section class="band eng-only" id="methodBand">
+  <header><p class="eyebrow">Yöntem</p><h2>NASA verisi münavebe kararına nasıl dönüşür</h2></header>
+  <div class="prose">
+    <div class="scroll"><table>
+      <thead><tr><th>Veri</th><th>Parametre</th><th>Karara etkisi</th></tr></thead>
+      <tbody>
+        <tr><td>NASA POWER (MERRA-2, aylık, 2001–bugün)</td><td class="raw">T2M, T2M_MAX, T2M_MIN</td><td>Sezon sıcaklığı, don ve kavrulma uygunluğu; 2001–10 ile son 10 yıl ayrı hesaplanır</td></tr>
+        <tr><td>NASA POWER (GPM/IMERG tabanlı)</td><td class="raw">PRECTOTCORR</td><td>Sezon yağışı ve yağış eğilimi → kuraklık baskısı → sulu ürünlere su cezası</td></tr>
+        <tr><td>NASA POWER (MERRA-2)</td><td class="raw">GWETROOT</td><td>Ekim öncesi kök bölgesinde depolanan su (tav) sezon suyuna eklenir</td></tr>
+        <tr><td>MODIS MOD13Q1 (ORNL DAAC)</td><td class="raw">NDVI 250 m, 16 gün</td><td>Parselin yeşillik eğilimi; zayıflıyorsa bakliyata ve nadasa ek puan</td></tr>
+        <tr><td>NASA GIBS</td><td class="raw">MODIS NDVI, gerçek renk, SMAP L4</td><td>Haritada güncel görsel kontrol (sağ üst katman menüsü)</td></tr>
+        <tr><td>SoilGrids 2.0 (ISRIC)</td><td class="raw">phh2o, clay, soc</td><td>Toprak pH ve kil kısıtı</td></tr>
+      </tbody>
+    </table></div>
+    <h3>Model</h3>
+    <ul>
+      <li><b>Uygunluk (0–100):</b> sıcaklık, kavrulma, don, su, pH ve kil faktörleri FAO EcoCrop aralıklarından trapez fonksiyonla 0–1 puanlanır; skor = 100 × (0,65 × en düşük faktör + 0,35 × ortalama).</li>
+      <li><b>Münavebe:</b> uygunluğu ≥30 olan ürünlerle (artı nadas) tüm N yıllık diziler denenir; aile tekrarı, azot kredisi, hastalık zinciri, kök derinliği, takvim çakışması ve su/toprak/kazanç öncelikleri puanlanır.</li>
+      <li><b>Su:</b> sulama ihtiyacı = sezon su ihtiyacı − (sezon yağışı + depolanan toprak suyu). 1 mm = 1 m³/da; 1 salma ≈ 70 mm.</li>
+      <li><b>Gübre:</b> bakliyat sonrası 3–5 kg N/da azot kredisi (≈ 6,5–11 kg üre/da) varsayılır; yukarıdan değiştirilebilir.</li>
+      <li><b>Karşılaştırma:</b> kıraçta buğday–nadas; sulu tarlada önceki ürün ile buğdayın dönüşümlü ekimi.</li>
+    </ul>
+    <h3>Sınırlar ve maliyet</h3>
+    <ul>
+      <li>POWER ~50 km ızgara verisidir; NDVI 250 m piksel olduğundan küçük parsellerde komşu tarlalar karışabilir. Verim ve kâr tahmini yapılmaz.</li>
+      <li>Tek HTML dosyası; sunucu, veritabanı ve API anahtarı yok. İşletme ve veri maliyeti 0 ₺.</li>
+    </ul>
+  </div>
+</section>
+
+<footer class="band src">
+  <p class="farm-only">Yağış, sıcaklık ve toprak nemi NASA POWER'dan, tarla yeşilliği NASA MODIS uydusundan, toprak bilgisi SoilGrids'ten alınır. Bu bir öneridir; son karar için ilçe tarım müdürlüğüne veya ziraat mühendisine danışın.</p>
+  <p class="eng-only">Kaynaklar: <a href="https://power.larc.nasa.gov/">NASA POWER</a> · <a href="https://modis.ornl.gov/data/modis_webservice.html">ORNL DAAC MODIS</a> · <a href="https://www.earthdata.nasa.gov/engage/open-data-services-software/earthdata-developer-portal/gibs-api">NASA GIBS</a> · <a href="https://www.isric.org/explore/soilgrids">SoilGrids 2.0</a> · FAO EcoCrop (yaklaşık eşikler). Karar desteğidir; son karar için yerel ziraat mühendisine danışın.</p>
+</footer>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
+<script>
+/* FieldShift motoru — saf fonksiyonlar (tarayıcı + node) */
+var FS = (function () {
+  var MD = [31, 28.25, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31];
+  var POWER_PARAMS = ['T2M', 'T2M_MAX', 'T2M_MIN', 'PRECTOTCORR', 'GWETROOT', 'GWETTOP', 'ALLSKY_SFC_SW_DWN'];
+
+  // Ürün bilgi tabanı (FAO EcoCrop aralıkları ve Türkiye ekim takvimlerinden yaklaşık değerler; düzenlenebilir)
+  // m: sezon ayları, t: sezon ort. sıcaklık trapez [a,b,c,d], tx: [opt, sıfır] en sıcak ayın ort. maks.,
+  // tn: [sıfır, opt] en soğuk ayın ort. min., r: yağışa dayalı sezon suyu (mm) trapez, irr: sulama gereği,
+  // wn: sezon su ihtiyacı (mm), ph trapez, soil: toprağa etkisi (-1 tüketir, +1 iyileştirir, +2 yeşil gübre),
+  // gap: aynı ürün için en az kaç yıl ara, inc: göreli gelir 1-5 (kullanıcı değiştirir)
+  var CROPS = [
+    { id: 'bugday', n: 'Buğday', f: 'Poaceae', g: 'tahil', s: 'K', m: [10, 11, 12, 1, 2, 3, 4, 5, 6], t: [2, 6, 12, 17], tx: [29, 35], tn: [-18, -6], r: [200, 330, 700, 1100], irr: 'no', wn: 450, ph: [5, 6, 7.8, 8.6], soil: 0, root: 's', gap: 1, inc: 3 },
+    { id: 'arpa', n: 'Arpa', f: 'Poaceae', g: 'tahil', s: 'K', m: [10, 11, 12, 1, 2, 3, 4, 5, 6], t: [1, 5, 12, 17], tx: [30, 36], tn: [-16, -5], r: [170, 280, 600, 1000], irr: 'no', wn: 400, ph: [5.5, 6.5, 8.3, 9], soil: 0, root: 's', gap: 1, inc: 3 },
+    { id: 'nohut', n: 'Nohut', f: 'Fabaceae', g: 'baklagil', s: 'Y', m: [3, 4, 5, 6, 7], t: [9, 13, 21, 27], tx: [32, 38], tn: [-7, 0], r: [120, 200, 450, 800], irr: 'no', wn: 350, ph: [5.5, 6.5, 8.3, 9], soil: 1, root: 'd', gap: 3, inc: 4 },
+    { id: 'mercimek', n: 'Kırmızı mercimek', f: 'Fabaceae', g: 'baklagil', s: 'K', m: [11, 12, 1, 2, 3, 4, 5], t: [2, 6, 13, 18], tx: [29, 35], tn: [-12, -3], r: [180, 280, 550, 900], irr: 'no', wn: 350, ph: [5.5, 6.2, 8, 8.8], soil: 1, root: 's', gap: 3, inc: 4 },
+    { id: 'fig', n: 'Fiğ (yem / yeşil gübre)', f: 'Fabaceae', g: 'baklagil', s: 'K', m: [10, 11, 12, 1, 2, 3, 4, 5], t: [2, 5, 12, 17], tx: [28, 34], tn: [-14, -4], r: [200, 300, 700, 1100], irr: 'no', wn: 350, ph: [5.5, 6, 8, 8.6], soil: 2, root: 's', gap: 2, inc: 2 },
+    { id: 'kolza', n: 'Kolza', f: 'Brassicaceae', g: 'genis', s: 'K', m: [9, 10, 11, 12, 1, 2, 3, 4, 5, 6], t: [2, 5, 12, 16], tx: [28, 34], tn: [-15, -5], r: [300, 420, 800, 1200], irr: 'no', wn: 500, ph: [5.5, 6, 7.8, 8.5], soil: 0, root: 'd', gap: 3, inc: 4 },
+    { id: 'aspir', n: 'Aspir', f: 'Asteraceae', g: 'genis', s: 'Y', m: [3, 4, 5, 6, 7, 8], t: [10, 14, 23, 28], tx: [34, 40], tn: [-4, 2], r: [120, 220, 500, 900], irr: 'no', wn: 450, ph: [5.5, 6.5, 8.2, 8.8], soil: 0, root: 'd', gap: 3, inc: 3 },
+    { id: 'aycicegi', n: 'Ayçiçeği', f: 'Asteraceae', g: 'genis', s: 'Y', m: [4, 5, 6, 7, 8, 9], t: [13, 17, 25, 30], tx: [33, 39], tn: [2, 7], r: [200, 350, 650, 1000], irr: 'opt', wn: 550, ph: [5.5, 6.2, 8, 8.6], soil: -1, root: 'd', gap: 4, inc: 4 },
+    { id: 'misir', n: 'Mısır (dane)', f: 'Poaceae', g: 'tahil', s: 'Y', m: [4, 5, 6, 7, 8, 9], t: [15, 19, 27, 32], tx: [34, 39], tn: [4, 10], r: [400, 600, 900, 1300], irr: 'yes', wn: 700, ph: [5.5, 6, 7.8, 8.5], soil: -1, root: 'd', gap: 2, inc: 4 },
+    { id: 'pancar', n: 'Şeker pancarı', f: 'Amaranthaceae', g: 'genis', s: 'Y', m: [4, 5, 6, 7, 8, 9, 10], t: [10, 14, 22, 27], tx: [32, 37], tn: [0, 5], r: [350, 550, 800, 1200], irr: 'yes', wn: 750, ph: [6, 6.5, 8, 8.7], soil: -1, root: 'd', gap: 4, inc: 5 },
+    { id: 'pamuk', n: 'Pamuk', f: 'Malvaceae', g: 'genis', s: 'Y', m: [4, 5, 6, 7, 8, 9, 10], t: [17, 21, 29, 33], tx: [35, 41], tn: [8, 14], r: [450, 650, 1000, 1400], irr: 'yes', wn: 800, ph: [5.5, 6, 8, 8.8], soil: -1, root: 'd', gap: 2, inc: 4 },
+    { id: 'patates', n: 'Patates', f: 'Solanaceae', g: 'genis', s: 'Y', m: [4, 5, 6, 7, 8, 9], t: [10, 14, 20, 25], tx: [27, 32], tn: [1, 5], r: [350, 500, 750, 1100], irr: 'yes', wn: 550, ph: [4.8, 5.5, 7.5, 8.3], soil: -1, root: 's', gap: 3, inc: 5, clayMax: 40 },
+    { id: 'fasulye', n: 'Kuru fasulye', f: 'Fabaceae', g: 'baklagil', s: 'Y', m: [5, 6, 7, 8, 9], t: [14, 17, 24, 28], tx: [31, 36], tn: [4, 9], r: [300, 400, 600, 900], irr: 'yes', wn: 500, ph: [5.5, 6, 7.8, 8.5], soil: 1, root: 's', gap: 3, inc: 4 }
+  ];
+  // Geleneksel gruplar ve Türkçe aile adları
+  var GROUP = { Poaceae: 'Hububat (Tahıl)', Fabaceae: 'Bakliyat (Toprağı Dinlendiren)', Brassicaceae: 'Yağlı Tohum', Asteraceae: 'Yağlı Tohum', Amaranthaceae: 'Çapa Bitkisi (Toprağı Yoran)', Malvaceae: 'Çapa Bitkisi (Toprağı Yoran)', Solanaceae: 'Çapa Bitkisi (Toprağı Yoran)', nadas: 'Nadas' };
+  var FAMTR = { Poaceae: 'buğdaygiller', Fabaceae: 'baklagiller', Brassicaceae: 'turpgiller', Asteraceae: 'papatyagiller', Amaranthaceae: 'pancargiller', Malvaceae: 'ebegümecigiller', Solanaceae: 'patlıcangiller' };
+  var NADAS = { id: 'nadas', n: 'Nadas', f: 'nadas', g: 'nadas', s: '-', soil: 1, root: '-', gap: 1, inc: 1, irr: 'no', wn: 0, m: [] };
+
+  function trap(x, p) {
+    if (x == null || isNaN(x)) return 1;
+    if (x <= p[0] || x >= p[3]) return 0;
+    if (x < p[1]) return (x - p[0]) / (p[1] - p[0]);
+    if (x > p[2]) return (p[3] - x) / (p[3] - p[2]);
+    return 1;
+  }
+  function ramp(x, zero, opt) { // zero -> 0, opt -> 1 (yön fark etmez)
+    if (x == null || isNaN(x)) return 1;
+    var v = (x - zero) / (opt - zero);
+    return Math.max(0, Math.min(1, v));
+  }
+  function mean(a) { var s = 0, n = 0; a.forEach(function (v) { if (v != null && !isNaN(v)) { s += v; n++; } }); return n ? s / n : null; }
+  function slope(xs, ys) {
+    var p = []; for (var i = 0; i < xs.length; i++) if (ys[i] != null && !isNaN(ys[i])) p.push([xs[i], ys[i]]);
+    if (p.length < 3) return null;
+    var mx = mean(p.map(function (q) { return q[0]; })), my = mean(p.map(function (q) { return q[1]; }));
+    var a = 0, b = 0; p.forEach(function (q) { a += (q[0] - mx) * (q[1] - my); b += (q[0] - mx) * (q[0] - mx); });
+    return b ? a / b : null;
+  }
+
+  // NASA POWER aylık JSON -> {param: {yil: [12 değer]}}
+  function parsePower(json) {
+    var P = json.properties.parameter, out = {}, years = {};
+    Object.keys(P).forEach(function (k) {
+      out[k] = {};
+      Object.keys(P[k]).forEach(function (key) {
+        var y = +key.slice(0, 4), m = +key.slice(4, 6);
+        if (m < 1 || m > 12) return;
+        var v = P[k][key]; if (v === -999 || v == null) v = null;
+        if (!out[k][y]) out[k][y] = new Array(12).fill(null);
+        out[k][y][m - 1] = v; years[y] = 1;
+      });
+    });
+    out._years = Object.keys(years).map(Number).sort(function (a, b) { return a - b; });
+    return out;
+  }
+
+  // Bir yıl aralığı için aylık klimatoloji (yağış mm/ay)
+  function climatology(d, y0, y1) {
+    var c = { T: [], TX: [], TN: [], R: [], W: [], SW: [] };
+    for (var m = 0; m < 12; m++) {
+      var t = [], tx = [], tn = [], r = [], w = [], sw = [];
+      for (var y = y0; y <= y1; y++) {
+        if (d.T2M[y]) t.push(d.T2M[y][m]);
+        if (d.T2M_MAX && d.T2M_MAX[y]) tx.push(d.T2M_MAX[y][m]);
+        if (d.T2M_MIN && d.T2M_MIN[y]) tn.push(d.T2M_MIN[y][m]);
+        if (d.PRECTOTCORR[y] && d.PRECTOTCORR[y][m] != null) r.push(d.PRECTOTCORR[y][m] * MD[m]);
+        if (d.GWETROOT && d.GWETROOT[y]) w.push(d.GWETROOT[y][m]);
+        if (d.ALLSKY_SFC_SW_DWN && d.ALLSKY_SFC_SW_DWN[y]) sw.push(d.ALLSKY_SFC_SW_DWN[y][m]);
+      }
+      c.T.push(mean(t)); c.TX.push(mean(tx)); c.TN.push(mean(tn)); c.R.push(mean(r)); c.W.push(mean(w)); c.SW.push(mean(sw));
+    }
+    c.y0 = y0; c.y1 = y1;
+    return c;
+  }
+  function shiftClim(c, dT, dPpct) {
+    var k = 1 + dPpct / 100;
+    return { T: c.T.map(function (v) { return v + dT; }), TX: c.TX.map(function (v) { return v + dT; }), TN: c.TN.map(function (v) { return v + dT; }), R: c.R.map(function (v) { return v * k; }), W: c.W.map(function (v) { return v == null ? null : Math.max(0, Math.min(1, v * (1 + (dPpct / 100) * 0.6) - dT * 0.01)); }), SW: c.SW, y0: c.y0, y1: c.y1 };
+  }
+
+  // Yıllık seriler ve eğilimler
+  function annual(d) {
+    var ys = d._years.filter(function (y) { return d.T2M[y] && d.T2M[y].every(function (v) { return v != null; }); });
+    var rain = ys.map(function (y) { return d.PRECTOTCORR[y].reduce(function (s, v, i) { return s + (v || 0) * MD[i]; }, 0); });
+    var temp = ys.map(function (y) { return mean(d.T2M[y]); });
+    var wet = ys.map(function (y) { return d.GWETROOT && d.GWETROOT[y] ? mean(d.GWETROOT[y]) : null; });
+    var hot = ys.map(function (y) { return d.T2M_MAX && d.T2M_MAX[y] ? d.T2M_MAX[y].filter(function (v) { return v != null && v >= 32; }).length : null; });
+    return { years: ys, rain: rain, temp: temp, wet: wet, hot: hot,
+      rainSlope: slope(ys, rain), tempSlope: slope(ys, temp), wetSlope: slope(ys, wet) };
+  }
+
+  function seasonStats(crop, c) {
+    var idx = crop.m.map(function (m) { return m - 1; });
+    var T = mean(idx.map(function (i) { return c.T[i]; }));
+    var TX = Math.max.apply(null, idx.map(function (i) { return c.TX[i] == null ? -99 : c.TX[i]; }));
+    var TN = Math.min.apply(null, idx.map(function (i) { return c.TN[i] == null ? 99 : c.TN[i]; }));
+    var R = idx.reduce(function (s, i) { return s + (c.R[i] || 0); }, 0);
+    var prev = (crop.m[0] + 10) % 12; // ekimden önceki ay
+    var W0 = c.W[prev];
+    var stored = W0 == null ? 0 : Math.max(0, (W0 - 0.3)) * 250; // kaba: kök bölgesinde depolanan kullanılabilir su (mm)
+    return { T: T, TX: TX, TN: TN, R: R, W0: W0, stored: stored, eff: R + stored };
+  }
+
+  // Ürün uygunluğu (0-100) + sınırlayıcı faktör açıklaması
+  function suit(crop, c, soil, irrigation) {
+    var st = seasonStats(crop, c);
+    var f = {};
+    f.temp = trap(st.T, crop.t);
+    f.heat = ramp(st.TX, crop.tx[1], crop.tx[0]);
+    if (st.TX <= crop.tx[0]) f.heat = 1;
+    f.cold = st.TN >= crop.tn[1] ? 1 : ramp(st.TN, crop.tn[0], crop.tn[1]);
+    var needsIrr = crop.irr === 'yes';
+    if (irrigation && (crop.irr === 'yes' || crop.irr === 'opt')) f.water = 1;
+    else f.water = trap(st.eff, crop.r);
+    f.ph = soil && soil.ph != null ? trap(soil.ph, crop.ph) : 1;
+    f.tex = (crop.clayMax && soil && soil.clay != null) ? (soil.clay <= crop.clayMax ? 1 : Math.max(0, 1 - (soil.clay - crop.clayMax) / 15)) : 1;
+    var vals = Object.keys(f).map(function (k) { return f[k]; });
+    var mn = Math.min.apply(null, vals), av = mean(vals);
+    var S = Math.round(100 * (0.65 * mn + 0.35 * av));
+    var lim = Object.keys(f).sort(function (a, b) { return f[a] - f[b]; })[0];
+    var irrUse = (irrigation && crop.irr !== 'no') ? Math.max(0, crop.wn - st.eff) : 0;
+    return { S: S, f: f, lim: f[lim] < 0.95 ? lim : null, st: st, irrUse: irrUse, needsIrr: needsIrr };
+  }
+
+  var LIMFARM = {
+    temp: 'bu iklim bu ürüne göre fazla soğuk ya da sıcak',
+    heat: 'hasat öncesi sıcak vurur (kavrulma / pişkinlik riski)',
+    cold: 'kış soğuğu, don vurur',
+    water: 'yağmur yetmez, su ister',
+    ph: 'toprak kireçli / çorak, sevmez',
+    tex: 'toprak ağır (killi), sevmez'
+  };
+  var LIMTXT = {
+    temp: 'sezon sıcaklığı uygun aralığın dışında',
+    heat: 'sıcak stresi (en sıcak ayın ort. maks. sıcaklığı yüksek)',
+    cold: 'soğuk/don riski',
+    water: 'yağış + topraktaki su ihtiyacı karşılamıyor',
+    ph: 'toprak pH değeri uygun değil',
+    tex: 'toprak çok killi'
+  };
+
+  // Rotasyon planlayıcı
+  function plan(opts) {
+    // opts: {suits:{id:result}, prev:id|null, years:3, irrigation, pri:{water,soil,income}, drought: 0..1, inc:{id:n}}
+    var pool = CROPS.filter(function (c) { return opts.suits[c.id] && opts.suits[c.id].S >= 30; });
+    pool.push(NADAS);
+    var byId = {}; CROPS.concat([NADAS]).forEach(function (c) { byId[c.id] = c; });
+    var fixed = opts.next && byId[opts.next] ? byId[opts.next] : null;
+    var seqs = [];
+    var N = opts.years || 3;
+    function rec(cur) {
+      if (cur.length === N) { seqs.push(cur.slice()); return; }
+      if (cur.length === 0 && fixed) { cur.push(fixed); rec(cur); cur.pop(); return; }
+      pool.forEach(function (c) { cur.push(c); rec(cur); cur.pop(); });
+    }
+    rec([]);
+    var prev = opts.prev && byId[opts.prev] ? byId[opts.prev] : null;
+    var res = seqs.map(function (seq) {
+      var notes = [], pts = 0;
+      var full = prev ? [prev].concat(seq) : seq.slice();
+      var base = mean(seq.map(function (c) { return c.id === 'nadas' ? 45 : opts.suits[c.id].S; }));
+      for (var i = 1; i < full.length; i++) {
+        var a = full[i - 1], b = full[i];
+        if (a.id === 'nadas' || b.id === 'nadas') {
+          if (a.id === 'nadas' && b.id === 'nadas') { pts -= 15; notes.push([-15, 'Üst üste nadas: iki yıl ürün kalkmaz']); }
+          else if (a.id === 'nadas' && b.g === 'tahil' && b.s === 'K') { pts += 6; notes.push([6, 'Nadastan sonra güzlük hububat: nadasın biriktirdiği tav kullanılır']); }
+          else if (b.id === 'nadas' && a.m.length && (a.m[a.m.length - 1] >= 9)) { pts += 2; notes.push([2, a.n + ' → Nadas: geç hasattan sonra toprak dinlenir']); }
+          continue;
+        }
+        if (a.id === b.id) { pts -= 30; notes.push([-30, a.n + ' üst üste: hastalık ve haşere birikir']); }
+        else if (a.f === b.f) { pts -= 15; notes.push([-15, a.n + ' → ' + b.n + ': aynı aileden iki ürün üst üste (' + (FAMTR[a.f] || a.f) + ')']); }
+        // takvim: a'nın hasat ayı ile b'nin ekim ayı arasındaki boşluk
+        var aEnd = a.m[a.m.length - 1], bStart = b.m[0], gapM = (bStart - aEnd + 12) % 12;
+        if (gapM === 0) { pts -= 12; notes.push([-12, a.n + ' → ' + b.n + ': hasat ile ekim aynı aya düşüyor, ekim gecikir']); }
+        else if (gapM === 1) { pts -= 5; notes.push([-5, a.n + ' → ' + b.n + ': hasattan ekime ancak 1 ay var, toprak hazırlığı sıkışır']); }
+        else if (a.s !== b.s) { pts += 3; notes.push([3, a.n + ' → ' + b.n + ': güzlük/yazlık sırası, toprağı hazırlamaya vakit kalır, tav birikir']); }
+        if (a.g === 'baklagil' && (b.g === 'tahil' || b.soil < 0)) { pts += 10; notes.push([10, a.n + ' → ' + b.n + ': bakliyatın bıraktığı azot sayesinde gübre masrafı azalır']); }
+        if (a.g === 'tahil' && b.g !== 'tahil') { pts += 6; notes.push([6, a.n + ' → ' + b.n + ': hububat hastalıklarının (pas, kök çürüklüğü) zinciri kırılır']); }
+        if (a.soil < 0 && b.soil < 0) { pts -= 8; notes.push([-8, a.n + ' → ' + b.n + ': toprağı yoran iki ürün art arda']); }
+        if (a.root !== b.root && a.root !== '-' && b.root !== '-') { pts += 3; notes.push([3, a.n + ' → ' + b.n + ': biri derin biri yüzlek köklü, toprağın her katı kullanılır']); }
+      }
+      // ekim nöbeti aralığı
+      for (var p = 0; p < full.length; p++) for (var q = p + 1; q < full.length; q++) {
+        if (full[p].id === full[q].id && full[p].id !== 'nadas' && q - p < full[p].gap && q - p > 1) {
+          pts -= 25; notes.push([-25, full[p].n + ' aynı tarlaya en az ' + full[p].gap + ' yılda bir ekilmeli']);
+        }
+      }
+      var fams = {}; seq.forEach(function (c) { if (c.id !== 'nadas') fams[c.f] = 1; });
+      var nf = Object.keys(fams).length;
+      if (nf > 1) { pts += 4 * (nf - 1); notes.push([4 * (nf - 1), nf + ' farklı bitki ailesi: hastalık ve yabancı ot azalır']); }
+      // öncelikler
+      var pr = opts.pri || { water: 0.5, soil: 0.5, income: 0.5 };
+      var wPts = 0, sPts = 0, iPts = 0;
+      seq.forEach(function (c) {
+        var s = opts.suits[c.id];
+        if (s && s.irrUse) wPts -= pr.water * 18 * (s.irrUse / 700) * (1 + (opts.drought || 0));
+        sPts += pr.soil * 5 * c.soil;
+        var inc = (opts.inc && opts.inc[c.id] != null) ? opts.inc[c.id] : c.inc;
+        iPts += pr.income * 4 * (inc - 3);
+      });
+      var okS = function (c) { return c.id === 'nadas' || (opts.suits[c.id] && opts.suits[c.id].S >= 60); };
+      var lPts = 0; if (opts.legume) seq.forEach(function (c) { if (c.g === 'baklagil' && okS(c)) lPts += 6 * opts.legume; });
+      if (lPts) notes.push([Math.round(lPts), 'Bakliyat/fiğ (iklime uyanlar): toprak dinlenir, azotlu gübre masrafı düşer']);
+      var nPts = 0; if (opts.ndviWeak) seq.forEach(function (c) { if ((c.g === 'baklagil' || c.id === 'nadas') && okS(c)) nPts += 4 * opts.ndviWeak; });
+      if (nPts) notes.push([Math.round(nPts), 'Uydu (MODIS NDVI): tarlanın yeşilliği yıllardır azalıyor, toprağı dinlendiren ürüne ek puan']);
+      lPts += nPts;
+      if (Math.abs(wPts) >= 1) notes.push([Math.round(wPts), 'Sulama suyu masrafı (NASA POWER yağış ve nem eğilimine göre ağırlaşır)']);
+      if (Math.abs(sPts) >= 1) notes.push([Math.round(sPts), 'Toprağa etkisi']);
+      if (Math.abs(iPts) >= 1) notes.push([Math.round(iPts), iPts > 0 ? 'Kazancı yüksek ürünler' : 'Kazancı düşük ürünler']);
+      if (fixed && fixed.id !== 'nadas' && opts.suits[fixed.id] && opts.suits[fixed.id].S < 30) notes.push([0, fixed.n + ': bu iklime pek uymuyor (uygunluk ' + opts.suits[fixed.id].S + '/100), yine de seçildi']);
+      var total = base + pts + wPts + sPts + iPts + lPts;
+      var water = seq.reduce(function (s, c) { var u = opts.suits[c.id]; return s + (u ? u.irrUse : 0); }, 0);
+      return { seq: seq, base: base, total: total, notes: notes, water: water };
+    });
+    res.sort(function (a, b) { return b.total - a.total; });
+    // çeşitli öneriler: ilk yılı farklı olanları öne al
+    var out = [], seen = {};
+    for (var i = 0; i < res.length && out.length < 3; i++) {
+      var k = res[i].seq[fixed ? Math.min(1, res[i].seq.length - 1) : 0].id;
+      if (seen[k] && out.length < 2) continue;
+      seen[k] = 1; out.push(res[i]);
+    }
+    for (var j = 0; j < res.length && out.length < 3; j++) if (out.indexOf(res[j]) < 0) out.push(res[j]);
+    return { top: out, count: res.length };
+  }
+
+  // MODIS NDVI listesi -> yıllık zirve
+  function ndviSummary(pts) {
+    var by = {};
+    pts.forEach(function (p) { if (p.v == null) return; var y = p.d.slice(0, 4); (by[y] = by[y] || []).push(p.v); });
+    var ys = Object.keys(by).sort();
+    var peak = ys.map(function (y) { return Math.max.apply(null, by[y]); });
+    return { years: ys.map(Number), peak: peak, slope: slope(ys.map(Number), peak) };
+  }
+
+  // Çevrimdışı demo için sentetik veri (gerçek değil!)
+  function synthPower(lat) {
+    var P = {}; POWER_PARAMS.forEach(function (k) { P[k] = {}; });
+    var Tm = [-0.5, 1, 5.5, 11, 15.5, 20, 23.5, 23, 18.5, 12.5, 6, 1.5];
+    var Rm = [1.2, 1.0, 1.0, 1.3, 1.4, 0.8, 0.2, 0.15, 0.3, 0.9, 1.0, 1.3];
+    var Wm = [0.62, 0.64, 0.63, 0.58, 0.5, 0.4, 0.33, 0.3, 0.3, 0.34, 0.45, 0.55];
+    var seed = 7; function rnd() { seed = (seed * 9301 + 49297) % 233280; return seed / 233280 - 0.5; }
+    for (var y = 2001; y <= 2025; y++) {
+      var tr = (y - 2001) * 0.045, dr = 1 - (y - 2001) * 0.008, ya = rnd() * 0.5;
+      for (var m = 0; m < 12; m++) {
+        var key = y + ('0' + (m + 1)).slice(-2);
+        var t = Tm[m] + tr + rnd() * 1.4;
+        P.T2M[key] = +t.toFixed(2); P.T2M_MAX[key] = +(t + 7 + (m > 4 && m < 9 ? 3 : 0)).toFixed(2); P.T2M_MIN[key] = +(t - 7).toFixed(2);
+        P.PRECTOTCORR[key] = +Math.max(0, Rm[m] * dr * (1 + ya + rnd() * 0.8)).toFixed(2);
+        P.GWETROOT[key] = +Math.max(0.1, Wm[m] * (1 - (y - 2001) * 0.004) + rnd() * 0.05).toFixed(2);
+        P.GWETTOP[key] = P.GWETROOT[key]; P.ALLSKY_SFC_SW_DWN[key] = 3 + 4 * Math.sin(Math.PI * m / 11);
+      }
+    }
+    return { properties: { parameter: P } };
+  }
+
+  return { CROPS: CROPS, NADAS: NADAS, POWER_PARAMS: POWER_PARAMS, MD: MD, parsePower: parsePower, climatology: climatology, shiftClim: shiftClim, annual: annual, suit: suit, plan: plan, LIMTXT: LIMTXT, LIMFARM: LIMFARM, GROUP: GROUP, FAMTR: FAMTR, ndviSummary: ndviSummary, synthPower: synthPower, mean: mean, slope: slope };
+})();
+
+
+</script>
+<script>
+{
+const $ = id => document.getElementById(id);
+const S = { data: null, an: null, base: null, rec: null, ndvi: [], soil: { ph: null, clay: null }, soilSat: null, inc: {}, demo: false, goal: 'denge' };
+const ico = (id, cls = 'i i--sm') => `<svg class="${cls}" aria-hidden="true"><use href="#i-${id}"/></svg>`;
+
+// ---------- View mode ----------
+function setView(eng) {
+  document.body.classList.toggle('eng', eng);
+  $('vEng').setAttribute('aria-pressed', eng); $('vFarm').setAttribute('aria-pressed', !eng);
+  try { localStorage.setItem('fs-view', eng ? 'eng' : 'farm'); } catch (e) {}
+}
+$('vFarm').addEventListener('click', () => setView(false));
+$('vEng').addEventListener('click', () => setView(true));
+try { setView(localStorage.getItem('fs-view') === 'eng'); } catch (e) { setView(false); }
+
+// ---------- Feedback: toast, flash, enter ----------
+let toastT;
+function toast(msg, icon = 'check') { const t = $('toast'); t.innerHTML = ico(icon) + `<span>${msg}</span>`; t.classList.add('show'); clearTimeout(toastT); toastT = setTimeout(() => t.classList.remove('show'), 2600); }
+const prevVals = new Map(); let firstRender = true;
+function flashChanged() {
+  document.querySelectorAll('[data-k]').forEach(el => {
+    const k = el.dataset.k, v = el.textContent;
+    if (!firstRender && prevVals.has(k) && prevVals.get(k) !== v) { el.classList.remove('flash'); void el.offsetWidth; el.classList.add('flash'); }
+    prevVals.set(k, v);
+  });
+  firstRender = false;
+}
+document.addEventListener('animationend', e => { if (e.animationName === 'enter') e.target.classList.remove('enter'); if (e.animationName === 'flash') e.target.classList.remove('flash'); });
+
+// ---------- Soil ----------
+const SOIL = { kumlu: { ph: 7.0, clay: 10, n: 'kumlu' }, tinli: { ph: 7.2, clay: 22, n: 'tınlı' }, killi: { ph: 7.6, clay: 45, n: 'killi' }, kirecli: { ph: 8.3, clay: 28, n: 'kireçli' } };
+const soilClass = so => so == null || so.ph == null ? null : so.ph >= 8.1 ? 'kirecli' : so.clay >= 40 ? 'killi' : so.clay != null && so.clay < 15 ? 'kumlu' : 'tinli';
+function applySoil() {
+  const t = $('soilType').value;
+  if (SOIL[t]) S.soil = { ph: SOIL[t].ph, clay: SOIL[t].clay };
+  else if (t === 'auto') S.soil = S.soilSat ? { ph: S.soilSat.ph, clay: S.soilSat.clay } : { ph: null, clay: null };
+  if (t !== 'ozel') { $('ph').value = S.soil.ph != null ? (+S.soil.ph).toFixed(1) : ''; $('clay').value = S.soil.clay != null ? Math.round(S.soil.clay) : ''; }
+  const autoOpt = $('soilType').querySelector('[value=auto]'), c = soilClass(S.soilSat);
+  autoOpt.textContent = c ? `Bilmiyorum (uydu tahmini: ${SOIL[c].n})` : 'Bilmiyorum (uydudan tahmin)';
+}
+
+// ---------- Goals ----------
+const GOALS = {
+  su: { pW: 90, pS: 40, pI: 30, dT: 1, dP: -15, legume: 0 },
+  gelir: { pW: 30, pS: 30, pI: 95, dT: 0, dP: 0, legume: 0 },
+  toprak: { pW: 40, pS: 95, pI: 30, dT: 0, dP: 0, legume: 1 },
+  denge: { pW: 50, pS: 50, pI: 50, dT: 0, dP: 0, legume: 0 }
+};
+const GOALN = { su: 'suyum kıt', gelir: 'en çok kazandıran', toprak: 'toprağı dinlendir', denge: 'dengeli' };
+function setGoal(g) {
+  S.goal = g;
+  document.querySelectorAll('.goal').forEach(b => b.setAttribute('aria-pressed', b.dataset.goal === g));
+  if (g) Object.entries(GOALS[g]).forEach(([k, v]) => { if ($(k)) $(k).value = v; });
+}
+const fmt = (v, d = 0) => v == null || isNaN(v) ? '–' : v.toFixed(d).replace('-', '−');
+const sign = v => (v > 0 ? '+' : '');
+const fmtN = v => Math.round(v).toLocaleString('tr-TR');
+
+// ---------- Map ----------
+const map = L.map('map', { zoomControl: true }).setView([37.8746, 32.4932], 11);
+const esri = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', { maxZoom: 18, attribution: 'Esri World Imagery' }).addTo(map);
+const osm = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 18, attribution: '© OpenStreetMap' });
+const d0 = new Date(Date.now() - 24 * 864e5).toISOString().slice(0, 10);
+const gibs = (layer, ext, lvl) => L.tileLayer(`https://gibs.earthdata.nasa.gov/wmts/epsg3857/best/${layer}/default/${d0}/GoogleMapsCompatible_Level${lvl}/{z}/{y}/{x}.${ext}`, { maxNativeZoom: lvl, maxZoom: 18, opacity: .75, attribution: 'NASA GIBS' });
+const ndviL = gibs('MODIS_Terra_NDVI_8Day', 'png', 9);
+const tcL = gibs('MODIS_Terra_CorrectedReflectance_TrueColor', 'jpg', 9);
+const smapL = L.tileLayer.wms('https://gibs.earthdata.nasa.gov/wms/epsg4326/best/wms.cgi', { layers: 'SMAP_L4_Analyzed_Root_Zone_Soil_Moisture', format: 'image/png', transparent: true, version: '1.3.0', crs: L.CRS.EPSG4326, time: d0.slice(0, 8) + '01', opacity: .65, attribution: 'NASA GIBS / SMAP' });
+L.control.layers({ 'Uydu görüntüsü': esri, 'Sokak haritası': osm }, { 'MODIS NDVI (8 gün)': ndviL, 'MODIS gerçek renk': tcL, 'SMAP kök bölgesi nemi': smapL }).addTo(map);
+let marker = L.marker([37.8746, 32.4932]).addTo(map);
+const pressPreset = btn => document.querySelectorAll('.pbtn[data-ll]').forEach(b => b.setAttribute('aria-pressed', b === btn));
+map.on('click', e => { $('lat').value = e.latlng.lat.toFixed(4); $('lon').value = e.latlng.lng.toFixed(4); marker.setLatLng(e.latlng); pressPreset(null); status('Tarla işaretlendi. Planını çıkar.'); });
+const setLoc = (lat, lon, z) => { $('lat').value = (+lat).toFixed(4); $('lon').value = (+lon).toFixed(4); marker.setLatLng([lat, lon]); map.setView([lat, lon], z || map.getZoom()); };
+document.querySelectorAll('.pbtn[data-ll]').forEach(b => b.addEventListener('click', () => { const [la, lo] = b.dataset.ll.split(',').map(Number); setLoc(la, lo, 11); pressPreset(b); status(`${b.textContent} seçildi. Planını çıkar.`); }));
+const geoLabel = $('geo').innerHTML;
+$('geo').addEventListener('click', () => {
+  if (!navigator.geolocation) return status('Tarayıcı konum servisini desteklemiyor.', 'err');
+  $('geo').disabled = true; $('geo').innerHTML = '<span class="spin" style="width:14px;height:14px"></span><span>Konum alınıyor…</span>';
+  const done = () => { $('geo').disabled = false; $('geo').innerHTML = geoLabel; };
+  navigator.geolocation.getCurrentPosition(
+    p => { done(); setLoc(p.coords.latitude, p.coords.longitude, 13); pressPreset(null); status(`Konum bulundu (±${Math.round(p.coords.accuracy)} m). Planını çıkar.`, 'ok'); },
+    e => { done(); status('Konum alınamadı: ' + (e.code === 1 ? 'izin verilmedi' : e.code === 3 ? 'zaman aşımı' : 'konum belirlenemedi') + '.', 'err'); },
+    { enableHighAccuracy: true, timeout: 15000, maximumAge: 60000 });
+});
+['lat', 'lon'].forEach(id => $(id).addEventListener('change', () => { const ll = [+$('lat').value, +$('lon').value]; marker.setLatLng(ll); map.panTo(ll); pressPreset(null); }));
+
+// ---------- Controls ----------
+$('prev').innerHTML = '<option value="">Bilmiyorum / yok</option>' + FS.CROPS.concat([FS.NADAS]).map(c => `<option value="${c.id}">${c.n}</option>`).join('');
+$('prev').value = 'bugday';
+$('next').innerHTML = '<option value="">Sen öner</option>' + FS.CROPS.concat([FS.NADAS]).map(c => `<option value="${c.id}">${c.n}</option>`).join('');
+const sl = () => { $('goalTag').textContent = S.goal ? `· hedef: ${GOALN[S.goal]}` : '· özel ayar'; $('vW').textContent = $('pW').value; $('vS').textContent = $('pS').value; $('vI').textContent = $('pI').value; $('vT').textContent = '+' + (+$('dT').value).toFixed(1); $('vP').textContent = (+$('dP').value > 0 ? '+' : '') + $('dP').value; };
+['pW', 'pS', 'pI', 'dT', 'dP'].forEach(id => $(id).addEventListener('input', () => { setGoal(null); sl(); if (S.data) compute(); }));
+document.querySelectorAll('.goal').forEach(b => b.addEventListener('click', () => { setGoal(b.dataset.goal); sl(); if (S.data) compute(); }));
+['prev', 'next', 'years', 'irr', 'kirac', 'soilType', 'ph', 'clay', 'area', 'urea', 'baseMode', 'nLo', 'nHi'].forEach(id => $(id).addEventListener('change', () => {
+  if (id === 'ph' || id === 'clay') { S.soil.ph = $('ph').value === '' ? null : +$('ph').value; S.soil.clay = $('clay').value === '' ? null : +$('clay').value; const o = $('soilType').querySelector('[value=ozel]'); o.hidden = false; $('soilType').value = 'ozel'; }
+  if (id === 'soilType') applySoil();
+  if (S.data) compute();
+}));
+setGoal('denge'); sl();
+
+const status = (msg, cls) => { $('status').innerHTML = cls ? `<span class="${cls}">${msg}</span>` : msg; };
+
+// ---------- Fetch ----------
+async function fetchT(url, opts = {}, ms = 25000) {
+  const ac = new AbortController(), t = setTimeout(() => ac.abort(), ms);
+  try { return await fetch(url, { ...opts, signal: ac.signal }); }
+  catch (e) { throw e.name === 'AbortError' ? new Error('zaman aşımı') : e; }
+  finally { clearTimeout(t); }
+}
+async function getPower(lat, lon) {
+  const endY = new Date().getFullYear() - 1;
+  const url = `https://power.larc.nasa.gov/api/temporal/monthly/point?parameters=${FS.POWER_PARAMS.join(',')}&community=AG&longitude=${lon}&latitude=${lat}&start=2001&end=${endY}&format=JSON`;
+  const r = await fetchT(url, {}, 60000); if (!r.ok) throw new Error('POWER ' + r.status);
+  return r.json();
+}
+async function getSoil(lat, lon) {
+  const url = `https://rest.isric.org/soilgrids/v2.0/properties/query?lon=${lon}&lat=${lat}&property=phh2o&property=clay&property=soc&depth=0-5cm&depth=5-15cm&depth=15-30cm&value=mean`;
+  const r = await fetchT(url); if (!r.ok) throw new Error('SoilGrids ' + r.status);
+  const j = await r.json(), o = {};
+  j.properties.layers.forEach(L => { const df = L.unit_measure.d_factor || 1; const vs = L.depths.map(d => d.values.mean).filter(v => v != null); o[L.name] = vs.length ? FS.mean(vs) / df : null; });
+  return { ph: o.phh2o, clay: o.clay, soc: o.soc };
+}
+async function getNdvi(lat, lon) {
+  const base = 'https://modis.ornl.gov/rst/api/v1/MOD13Q1';
+  const h = { headers: { Accept: 'application/json' } };
+  const dr = await fetchT(`${base}/dates?latitude=${lat}&longitude=${lon}`, h); if (!dr.ok) throw new Error('MODIS ' + dr.status); const dj = await dr.json();
+  const dates = dj.dates.slice(-23 * 5);
+  const chunks = []; for (let i = 0; i < dates.length; i += 10) chunks.push(dates.slice(i, i + 10));
+  const out = [];
+  await Promise.all(chunks.map(async ch => {
+    const u = `${base}/subset?latitude=${lat}&longitude=${lon}&band=250m_16_days_NDVI&startDate=${ch[0].modis_date}&endDate=${ch[ch.length - 1].modis_date}&kmAboveBelow=0&kmLeftRight=0`;
+    const rr = await fetchT(u, h); if (!rr.ok) throw new Error('MODIS ' + rr.status); const j = await rr.json();
+    j.subset.forEach(s => { const v = s.data[0]; out.push({ d: s.calendar_date, v: v == null || v < -2000 ? null : v * 0.0001 }); });
+  }));
+  return out.sort((a, b) => a.d < b.d ? -1 : 1);
+}
+
+// Per-source progress
+function setSrc(k, st) {
+  const li = $('srcStatus').querySelector(`[data-src="${k}"]`); li.dataset.state = st;
+  li.querySelector('.ind').innerHTML = st === 'loading' ? '<span class="spin" style="width:12px;height:12px;border-width:1.5px"></span>' : st === 'ok' ? ico('check', 'i i--sm') : ico('x', 'i i--sm');
+}
+const track = (k, p) => { setSrc(k, 'loading'); return p.then(v => { setSrc(k, 'ok'); return v; }, e => { setSrc(k, 'err'); throw e; }); };
+
+let busy = false;
+const goLabel = $('go').innerHTML;
+const hasResults = () => !$('planBand').hidden;
+const lock = on => {
+  busy = on;
+  ['go', 'demo', 'geo'].forEach(id => $(id).disabled = on);
+  document.querySelectorAll('.pbtn[data-ll]').forEach(b => b.disabled = on);
+  $('go').innerHTML = on ? '<span class="spin"></span><span>NASA verisi çekiliyor…</span>' : goLabel;
+  $('go').setAttribute('aria-busy', on);
+  $('results').classList.toggle('is-stale', on && hasResults());
+  $('skeleton').hidden = !(on && !hasResults());
+};
+$('go').addEventListener('click', async () => {
+  if (busy) return;
+  const lat = +$('lat').value, lon = +$('lon').value;
+  if ($('lat').value === '' || $('lon').value === '' || !(Math.abs(lat) <= 90 && Math.abs(lon) <= 180)) return status('Geçerli bir konum gir.', 'err');
+  lock(true);
+  try { await fetchAll(lat, lon); }
+  catch (e) { status('Beklenmeyen hata: ' + e.message, 'err'); }
+  finally { lock(false); }
+});
+async function fetchAll(lat, lon) {
+  $('srcStatus').hidden = false;
+  status('25 yıllık veri okunuyor, 10–30 sn sürebilir.');
+  const [pw, so, nd] = await Promise.allSettled([track('power', getPower(lat, lon)), track('soil', getSoil(lat, lon)), track('modis', getNdvi(lat, lon))]);
+  if (pw.status !== 'fulfilled') { status('NASA POWER verisi alınamadı (' + pw.reason.message + '). Bağlantını kontrol et ya da örnek tarlayı dene.', 'err'); return; }
+  S.demo = false; $('demoNote').hidden = true;
+  S.data = FS.parsePower(pw.value);
+  if (so.status === 'fulfilled' && so.value.ph != null) { S.soilSat = so.value; applySoil(); $('soilNote').textContent = `SoilGrids tahmini (0–30 cm): pH ${so.value.ph.toFixed(1)}, kil %${fmt(so.value.clay)}, organik karbon ${fmt(so.value.soc, 1)} g/kg. Toprak analizin varsa onu gir.`; }
+  else { S.soilSat = null; applySoil(); $('soilNote').textContent = 'SoilGrids yanıt vermedi; pH ve kili elle gir (boş bırakılırsa toprak kısıtı uygulanmaz).'; }
+  S.ndvi = nd.status === 'fulfilled' ? nd.value : [];
+  const miss = [so.status !== 'fulfilled' && 'toprak', nd.status !== 'fulfilled' && 'uydu yeşilliği'].filter(Boolean);
+  status(miss.length ? `Plan hazır; ${miss.join(' ve ')} verisi olmadan hesaplandı.` : 'Plan hazır.', 'ok');
+  compute(true);
+}
+$('demo').addEventListener('click', () => runDemo(true));
+function runDemo(scroll) {
+  if (busy) return;
+  S.demo = true; $('demoNote').hidden = false; $('srcStatus').hidden = true;
+  S.data = FS.parsePower(FS.synthPower(+$('lat').value));
+  S.soilSat = { ph: 7.9, clay: 32, soc: 9 }; applySoil(); $('soilNote').textContent = 'Örnek tarla toprak değerleri (sentetik).';
+  S.ndvi = []; for (let y = 2021; y <= 2025; y++) for (let k = 0; k < 23; k++) { const doy = k * 16 + 1; const v = 0.15 + (0.45 - (y - 2021) * 0.02) * Math.exp(-((doy - 135) ** 2) / 1800); S.ndvi.push({ d: `${y}-${String(Math.ceil(doy / 30.5)).padStart(2, '0')}-01`, v }); }
+  status('Örnek tarla yüklendi.', 'ok'); compute(scroll);
+}
+
+// ---------- Compute ----------
+const BANDS = ['planBand', 'sumBand', 'shiftBand', 'suitBand', 'climBand', 'soilBand'];
+function compute(scroll) {
+  const d = S.data, ys = d._years.filter(y => d.T2M[y] && d.T2M[y].every(v => v != null));
+  const last = ys[ys.length - 1], first = ys[0];
+  S.an = FS.annual(d);
+  S.base = FS.climatology(d, first, Math.min(first + 9, last));
+  S.rec = FS.climatology(d, Math.max(last - 9, first), last);
+  const dT = +$('dT').value, dP = +$('dP').value;
+  const scen = FS.shiftClim(S.rec, dT, dP);
+  const irr = $('irr').checked;
+  const soil = { ph: S.soil.ph, clay: S.soil.clay };
+  const sb = {}, sr = {}, ss = {};
+  FS.CROPS.forEach(c => { sb[c.id] = FS.suit(c, S.base, soil, irr); sr[c.id] = FS.suit(c, S.rec, soil, irr); ss[c.id] = FS.suit(c, scen, soil, irr); });
+  const wetDrop = S.an.wetSlope != null ? Math.max(0, -S.an.wetSlope * 10 / 0.05) : 0;
+  const rainDrop = S.an.rainSlope != null ? Math.max(0, -S.an.rainSlope * 10 / 40) : 0;
+  const drought = Math.min(1, (wetDrop + rainDrop) / 2 + (dP < 0 ? -dP / 60 : 0));
+  const pri = { water: $('pW').value / 100, soil: $('pS').value / 100, income: $('pI').value / 100 };
+  const legume = S.goal ? GOALS[S.goal].legume : 0;
+  const ndS = FS.ndviSummary(S.ndvi), ndviWeak = ndS.slope != null && ndS.slope < -0.01 ? 1 : 0;
+  const popt = { prev: $('prev').value || null, next: $('next').value || null, years: +$('years').value, irrigation: irr, pri, drought, inc: S.inc, legume, ndviWeak };
+  const P = FS.plan({ ...popt, suits: ss });
+  const Pb = FS.plan({ ...popt, suits: sb, next: null });
+  S.last = { P, ss, irr };
+  $('skeleton').hidden = true;
+  BANDS.forEach(id => { const el = $(id); if (el.hidden) { el.hidden = false; el.classList.add('enter'); } });
+  renderTrans(ss);
+  renderPlans(P, ss, irr);
+  renderImpact(P, ss, irr);
+  renderSummary(P, ss, irr, drought);
+  renderShift(Pb, P, sb, ss, irr);
+  renderSuit(sb, sr, ss);
+  renderClimate(first, last, drought);
+  flashChanged();
+  if (scroll === true && innerWidth < 1000) $('planBand').scrollIntoView({ behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth', block: 'start' });
+}
+
+// ---------- Farmer language ----------
+const SU_MM = 70;
+function suText(mm) { if (!mm || mm < 15) return null; const k = mm / SU_MM, lo = Math.max(1, Math.floor(k)), hi = Math.max(lo + 1, Math.ceil(k)); return `~${lo}–${hi} sulama`; }
+function needMm(c, s) { return Math.max(0, c.wn - s.st.eff); }
+function badge(c, s, irr) {
+  if (c.id === 'nadas') return { k: 'nil', t: 'Nadas' };
+  if (c.irr === 'yes' && !irr) return { k: 'no', t: 'Ekilmez: sulama şart' };
+  if (s.S < 30) return { k: 'no', t: 'Ekilmez' };
+  if (s.S < 60) { const why = { water: 'su ister', heat: 'kavrulur', cold: 'don vurur', temp: 'iklim uymuyor', ph: 'toprak uymuyor', tex: 'toprak ağır' }[s.lim] || 'verim düşük'; return { k: 'risk', t: `Riskli: ${why}` }; }
+  if (s.irrUse > 0) return { k: 'ok', t: 'Uygun, su ister' };
+  return { k: 'ok', t: 'Çok uygun' };
+}
+const bdg = b => `<span class="st st--${b.k}">${b.t}</span>`;
+const grp = c => FS.GROUP[c.f] || c.f;
+const seqTxt = p => p ? p.seq.map(c => c.n).join(' → ') : '–';
+
+function farmStates(drought) {
+  const b = S.base, r = S.rec, a = S.an;
+  const sumR = c => c.R.reduce((t, v) => t + (v || 0), 0);
+  const rB = sumR(b), rR = sumR(r), rPct = rB ? (rR - rB) / rB * 100 : 0;
+  const tavR = FS.mean([r.W[9], r.W[10]]), tavB = FS.mean([b.W[9], b.W[10]]);
+  const tav = tavR == null ? null : tavR >= 0.45 ? { k: 'ok', t: 'Tavlı' } : tavR >= 0.30 ? { k: 'risk', t: 'Yarı kurak' } : { k: 'no', t: 'Kuru' };
+  const kavR = FS.mean([r.TX[4], r.TX[5]]), kavB = FS.mean([b.TX[4], b.TX[5]]);
+  const kav = kavR == null ? null : kavR >= 30 ? { k: 'no', t: 'Yüksek' } : kavR >= 27 ? { k: 'risk', t: 'Orta' } : { k: 'ok', t: 'Düşük' };
+  const summerD = FS.mean([5, 6, 7].map(i => r.TX[i])) - FS.mean([5, 6, 7].map(i => b.TX[i]));
+  const nd = FS.ndviSummary(S.ndvi), last = nd.peak.length ? nd.peak[nd.peak.length - 1] : null;
+  const yes = last == null ? null : nd.slope != null && nd.slope < -0.01 ? { k: 'no', t: 'Zayıflıyor' } : last >= 0.5 ? { k: 'ok', t: 'Gür' } : { k: 'risk', t: 'Orta' };
+  return { rB, rR, rPct, tav, tavR, tavB, kav, kavR, kavB, summerD, nd, last, yes, wetSlope: a.wetSlope, drought };
+}
+
+function renderSummary(P, ss, irr, drought) {
+  const f = farmStates(drought), out = [];
+  const rainPh = Math.abs(f.rPct) < 5 ? 'Yağış değişmedi' : `Yağış %${Math.abs(Math.round(f.rPct))} ${f.rPct < 0 ? 'azaldı' : 'arttı'}`;
+  const parts = [rainPh];
+  if (f.summerD > 0.3) parts.push(`yaz sıcağı ${f.summerD.toFixed(1).replace('.', ',')} °C arttı`);
+  if (f.kav && f.kav.k !== 'ok') parts.push(`kavrulma riski ${f.kav.t.toLowerCase()}`);
+  $('sumTitle').textContent = parts.join(', ');
+  if (f.tav) out.push(`Güz ekiminde toprağın tavı <b>${f.tav.t.toLowerCase()}</b>${f.wetSlope != null && f.wetSlope < -0.001 ? ' ve yıllar geçtikçe kuruyor' : ''}.`);
+  if (f.kav && f.kav.k !== 'ok') out.push(`Mayıs–haziran sıcağı başakta pişkinlik yapabilir; buğday ve arpada <b>erken ekim ve erkenci çeşit</b> iyi olur.`);
+  const prev = FS.CROPS.find(c => c.id === $('prev').value), top = P.top[0];
+  if (top) { const leg = top.seq.filter(c => c.g === 'baklagil').map(c => c.n.toLowerCase()); if (prev && prev.g === 'tahil' && leg.length) out.push(`Üst üste ${prev.n.toLowerCase()} yerine araya <b>${[...new Set(leg)].join(' veya ')}</b> koymak gübre masrafını düşürür.`); }
+  if (!irr) { const no = FS.CROPS.filter(c => c.irr === 'yes').map(c => c.n.replace(/ \(.*\)/, '').toLowerCase()); out.push(`Kıraçta ${no.slice(0, 3).join(', ')} gibi sulu ürünler önerilmez.`); }
+  const dT = +$('dT').value, dP = +$('dP').value;
+  if (dT || dP) out.push(`<span class="muted">Plan ${dT ? `+${dT} °C daha sıcak` : ''}${dT && dP ? ', ' : ''}${dP ? `%${Math.abs(dP)} ${dP < 0 ? 'daha az' : 'daha çok'} yağışlı` : ''} yıllara göre hazırlandı.</span>`);
+  $('lead').innerHTML = out.join(' ');
+
+  const card = (t, st, sub, raw, src, k) => `<div class="card"><div class="card__t">${t}</div><div class="state ${st ? st.k : ''}" data-k="${k}">${st ? st.t : '–'}</div><div class="sm muted">${sub}</div><div class="raw eng-only">${raw}</div><div class="card__src">${src}</div></div>`;
+  const rainSt = Math.abs(f.rPct) < 5 ? { k: 'ok', t: 'Değişmedi' } : f.rPct < 0 ? { k: f.rPct < -10 ? 'no' : 'risk', t: `%${Math.abs(Math.round(f.rPct))} azaldı` } : { k: 'ok', t: `%${Math.round(f.rPct)} arttı` };
+  $('farmCards').innerHTML =
+    card('Ekim zamanı toprak nemi', f.tav, 'Ekim–kasımda kök bölgesindeki su', `GWETROOT ${fmt(f.tavB, 2)} → ${fmt(f.tavR, 2)}`, 'NASA POWER', 'tav') +
+    card('Parselin yeşillik gücü', f.yes, f.nd.years.length ? `Son ${f.nd.years.length} yılın en gür hâli` : 'Uydu verisi alınamadı', f.nd.years.length ? `NDVI ${f.nd.years[0]}: ${fmt(f.nd.peak[0], 2)} → ${f.nd.years[f.nd.years.length - 1]}: ${fmt(f.last, 2)}` : '', 'NASA MODIS', 'yes') +
+    card('Yıllık yağış', rainSt, `Yılda ortalama ${fmtN(f.rR)} mm`, `PRECTOTCORR ${S.base.y0}–${S.base.y1}: ${fmt(f.rB)} → ${fmt(f.rR)} mm`, 'NASA POWER', 'rain') +
+    card('Başakta kavrulma riski', f.kav, 'Mayıs–haziran sıcağı', `T2M_MAX ${fmt(f.kavB, 1)} → ${fmt(f.kavR, 1)} °C`, 'NASA POWER', 'kav');
+}
+
+// ---------- Impact ----------
+function baselineSeq(prev, irr, n) {
+  const all = FS.CROPS.concat([FS.NADAS]), by = id => all.find(c => c.id === id), wheat = by('bugday');
+  if ($('baseMode').value === 'mono') { const m = prev && prev.id !== 'nadas' ? prev : wheat; return { seq: Array(n).fill(m), name: `${n} yıl üst üste ${m.n.toLowerCase()}` }; }
+  let a, b;
+  if (!irr) { a = wheat; b = FS.NADAS; }
+  else if (!prev || prev.id === 'nadas' || prev.id === 'bugday') { a = wheat; b = by('misir'); }
+  else { a = prev; b = wheat; }
+  const p = prev || b, seq = []; for (let k = 0; k < n; k++) seq.push((k % 2 === 0) === (p.id === a.id) ? b : a);
+  return { seq, name: seq.map(c => c.n).join(' → ') };
+}
+function seqStats(full) {
+  let credit = 0, breaks = 0;
+  for (let i = 1; i < full.length; i++) { const a = full[i - 1], b = full[i]; if (a.g === 'baklagil' && b.id !== 'nadas' && b.g !== 'baklagil') credit++; if (a.g === 'tahil' && b.g !== 'tahil') breaks++; }
+  return { credit, breaks };
+}
+function renderImpact(P, ss, irr) {
+  const top = P.top[0]; if (!top) { $('impCards').innerHTML = ''; $('impBase').textContent = ''; return; }
+  const all = FS.CROPS.concat([FS.NADAS]), prev = all.find(c => c.id === $('prev').value);
+  const area = Math.max(1, +$('area').value || 1), urea = +$('urea').value || 0, n = top.seq.length;
+  const nLo = Math.max(0, +$('nLo').value || 0), nHi = Math.max(nLo, +$('nHi').value || 0);
+  const B = baselineSeq(prev, irr, n);
+  $('impBase').textContent = `${area} dekar için, ${irr ? 'sulu tarlada yaygın' : 'kıraçta geleneksel'} uygulamaya göre: ${B.name}.`;
+  const sP = seqStats(prev ? [prev, ...top.seq] : top.seq), sB = seqStats(prev ? [prev, ...B.seq] : B.seq);
+  const dC = sP.credit - sB.credit;
+  const uLo = Math.round(dC * nLo / 0.46), uHi = Math.round(dC * nHi / 0.46);
+  const stat = (t, v, sub, k, good) => `<div class="stat"><div class="stat__t">${t}</div><div class="stat__v num ${good ? 'good' : ''}" data-k="imp-${k}">${v}</div><div class="stat__s">${sub}</div></div>`;
+  let h = dC > 0
+    ? stat('Gübre tasarrufu', `${fmtN(uLo * area)}–${fmtN(uHi * area)} kg`, `üre${urea ? ` · ≈ ${fmtN(uLo * area * urea)}–${fmtN(uHi * area * urea)} ₺` : ''} · bakliyat azotu`, 'n', true)
+    : stat('Gübre tasarrufu', '0 kg', 'Daha fazlası için “Toprağı dinlendir” hedefini seç', 'n');
+  const waterOf = seq => seq.reduce((t, c) => t + (irr && c.irr !== 'no' && ss[c.id] ? ss[c.id].irrUse : 0), 0);
+  const dW = (waterOf(B.seq) - top.water) * area;
+  h += irr
+    ? stat('Sulama suyu', dW > 0 ? `${fmtN(dW)} m³ az` : dW < 0 ? `${fmtN(-dW)} m³ fazla` : 'Aynı', `Plan toplamı ${fmtN(top.water * area)} m³ · ${suText(top.water) || 'sulama gerekmez'}`, 'w', dW > 0)
+    : stat('Sulama suyu', '0 m³', 'Plandaki ürünler yağmurla yetişir', 'w');
+  h += stat('Hastalık zinciri', `${sP.breaks}× kırılır`, `Karşılaştırmada ${sB.breaks}× · pas ve kök çürüklüğü azalır`, 'd', sP.breaks > sB.breaks);
+  const nadasB = B.seq.filter(c => c.id === 'nadas').length, nadasP = top.seq.filter(c => c.id === 'nadas').length;
+  h += nadasB > nadasP
+    ? stat('Hasat alınan yıl', `+${nadasB - nadasP} yıl`, `Nadas ${nadasB} yıldan ${nadasP} yıla iner`, 'y', true)
+    : stat('Bitki ailesi', `${new Set(top.seq.filter(c => c.id !== 'nadas').map(c => c.f)).size} farklı`, 'Fiyat ve kuraklık riski dağılır', 'y');
+  $('impCards').innerHTML = h;
+}
+
+// ---------- Shift ----------
+function renderShift(Pb, P, sb, ss, irr) {
+  const rank = { ok: 2, nil: 2, risk: 1, no: 0 }, worse = [], better = [];
+  FS.CROPS.forEach(c => { const a = badge(c, sb[c.id], irr), b = badge(c, ss[c.id], irr); if (rank[b.k] < rank[a.k]) worse.push([c, a, b]); else if (rank[b.k] > rank[a.k]) better.push([c, a, b]); });
+  const same = Pb.top[0] && P.top[0] && seqTxt(Pb.top[0]) === seqTxt(P.top[0]);
+  $('shiftEyebrow').textContent = `${S.base.y0}–${S.base.y1} iklimi ile ${S.rec.y0}–${S.rec.y1} iklimi`;
+  $('shiftTitle').textContent = same
+    ? `İklim kaydı ama en iyi plan aynı kaldı${worse.length ? `; ${worse.length} ürün zorlaştı` : ''}`
+    : `İklim kaydığı için plan değişti${worse.length ? `; ${worse.length} ürün zorlaştı` : ''}`;
+  const li = ([c, a, b]) => `<li><b>${c.n}</b>${bdg(a)}${ico('arrow')}${bdg(b)}</li>`;
+  $('shiftCards').innerHTML =
+    `<div class="card"><div class="card__t">${S.base.y0}–${S.base.y1} iklimiyle önerirdik</div><div class="shift-seq">${seqTxt(Pb.top[0])}</div>
+       <div class="card__t" style="margin-top:var(--s3)">Bugünkü iklimle öneriyoruz</div><div class="shift-seq now">${seqTxt(P.top[0])}</div></div>` +
+    `<div class="card"><div class="card__t down">${ico('down')} Zorlaşan ürünler</div>${worse.length ? `<ul class="chg">${worse.map(li).join('')}</ul>` : '<p class="sm muted">Bu parselde zorlaşan ürün yok.</p>'}</div>` +
+    `<div class="card"><div class="card__t up">${ico('up')} Kolaylaşan ürünler</div>${better.length ? `<ul class="chg">${better.map(li).join('')}</ul>` : '<p class="sm muted">Bu parselde kolaylaşan ürün yok.</p>'}</div>`;
+}
+
+// ---------- Plans (hero) ----------
+const noteLi = t => `<li>${t[0] > 0 ? ico('check', 'i i--sm pos') : t[0] < 0 ? ico('alert', 'i i--sm neg') : ico('minus', 'i i--sm neu')}<span class="pts eng-only ${t[0] > 0 ? 'pos' : t[0] < 0 ? 'neg' : 'neu'}">${t[0] > 0 ? '+' : ''}${String(t[0]).replace('-', '−')}</span><span>${t[1]}</span></li>`;
+const topNotes = (p, k) => p.notes.slice().sort((a, b) => Math.abs(b[0]) - Math.abs(a[0])).slice(0, k);
+function renderPlans(P, ss, irr) {
+  const n = +$('years').value;
+  if (!P.top.length) { $('planEyebrow').textContent = `${n} yıllık plan`; $('planTitle').textContent = 'Bu tarlaya uygun münavebe bulunamadı'; ['planSub', 'planYears', 'planWhy', 'plans'].forEach(id => $(id).innerHTML = ''); return; }
+  const top = P.top[0];
+  $('planEyebrow').textContent = `${n} yıllık münavebe planın`;
+  $('planTitle').innerHTML = top.seq.map(c => c.n.replace(/ \(.*\)/, '')).join('<span class="arr" aria-hidden="true">→</span>');
+  $('planTitle').setAttribute('aria-label', seqTxt(top));
+  $('planTitle').dataset.k = 'plan';
+  const sub = [];
+  if ($('next').value) sub.push(`1. yıl senin seçimin: ${top.seq[0].n}`);
+  if (irr) sub.push(`${n} yılda toplam sulama: ${suText(top.water) || 'gerekmez'}`);
+  sub.push(`<span class="eng-only">plan puanı ${top.total.toFixed(0)} · ort. uygunluk ${top.base.toFixed(0)}/100${irr ? ` · sulama ≈ ${Math.round(top.water)} mm` : ''}</span>`);
+  $('planSub').innerHTML = sub.join(' · ');
+  $('planYears').innerHTML = top.seq.map((c, k) => `<li class="yr"><span class="yr__n">${k + 1}. yıl · ${c.s === 'K' ? 'güzlük' : c.s === 'Y' ? 'yazlık' : 'dinlenme'}</span><span class="yr__crop">${c.n}</span><span class="yr__grp">${grp(c)}</span>${c.id === 'nadas' ? '' : bdg(badge(c, ss[c.id], irr))}<span class="raw eng-only">uygunluk ${c.id === 'nadas' ? '–' : ss[c.id].S}</span></li>`).join('');
+  $('planWhy').innerHTML = topNotes(top, 5).map(noteLi).join('');
+  $('plans').innerHTML = P.top.slice(1).map((p, i) => `<div class="card alt"><div class="card__t">${i + 2}. seçenek<span class="eng-only"> · puan ${p.total.toFixed(0)}</span></div><div class="alt__seq">${seqTxt(p)}</div><ul class="why">${topNotes(p, 3).map(noteLi).join('')}</ul></div>`).join('');
+}
+
+// ---------- Suitability ----------
+function color(sv) { return sv >= 70 ? 'var(--ok)' : sv >= 45 ? 'var(--warn)' : 'var(--bad)'; }
+function renderSuit(sb, sr, ss) {
+  const irr = $('irr').checked;
+  let okN = 0;
+  const rows = FS.CROPS.slice().sort((a, b) => ss[b.id].S - ss[a.id].S).map(c => {
+    const a = sb[c.id].S, b = sr[c.id].S, s = ss[c.id], bd = badge(c, s, irr);
+    if (bd.k === 'ok') okN++;
+    const delta = b - a, arrow = delta > 4 ? `<span class="up">${ico('up')}</span>` : delta < -4 ? `<span class="down">${ico('down')}</span>` : '';
+    const inc = S.inc[c.id] != null ? S.inc[c.id] : c.inc;
+    const need = c.irr === 'no' ? needMm(c, s) : (irr ? s.irrUse : needMm(c, s)), su = suText(need);
+    const suCell = c.irr === 'no' ? (su ? `Yağmurla yetişir; kurak yılda ${su} iyi gelir` : 'Yağmurla yetişir') : su ? (irr ? su : `${su} · <span class="down">suyun yok</span>`) : 'Yağmur yeter';
+    return `<tr><td data-l="Ürün"><b>${c.n}</b><div class="sub">${grp(c)} · ${c.s === 'K' ? 'güzlük' : 'yazlık'}</div></td>
+      <td data-l="Durum">${bdg(bd)}</td>
+      <td data-l="Neden?">${s.lim ? FS.LIMFARM[s.lim] : 'Belirgin sorun yok'}<div class="raw eng-only">${s.lim ? FS.LIMTXT[s.lim] : ''}</div></td>
+      <td data-l="Su ihtiyacı">${suCell}<div class="raw eng-only">${need ? Math.round(need) + ' mm' : ''}</div></td>
+      <td class="n eng-only" data-l="2001–10">${a}</td><td class="n eng-only" data-l="Son 10 yıl"><span style="display:inline-flex;gap:4px;align-items:center">${arrow}${b}</span></td>
+      <td class="eng-only" data-l="Senaryo"><div style="display:flex;gap:var(--s2);align-items:center"><div class="bar"><i style="width:${s.S}%;background:${color(s.S)}"></i></div><b class="num" style="min-width:2ch;text-align:right">${s.S}</b></div></td>
+      <td data-l="Kazanç (1–5)"><input class="inc" type="number" min="1" max="5" step="1" value="${inc}" data-id="${c.id}" aria-label="${c.n} kazanç puanı"></td></tr>`;
+  }).join('');
+  $('suitTitle').textContent = `${FS.CROPS.length} üründen ${okN} tanesi bu tarlaya uyuyor`;
+  const tb = $('suitT').querySelector('tbody'); tb.innerHTML = rows;
+  tb.querySelectorAll('.inc').forEach(el => el.addEventListener('change', e => { S.inc[e.target.dataset.id] = Math.max(1, Math.min(5, +e.target.value)); compute(); toast('Kazanç puanı güncellendi, plan yeniden hesaplandı'); }));
+}
+
+function renderTrans(ss) {
+  const pv = $('prev').value, nx = $('next').value;
+  if (!pv || !nx) { $('trans').innerHTML = ''; return; }
+  const r = FS.plan({ suits: ss, prev: pv, next: nx, years: 1, pri: { water: 0, soil: 0, income: 0 } }).top[0];
+  const all = FS.CROPS.concat([FS.NADAS]), key = all.find(c => c.id === pv).n + ' → ' + all.find(c => c.id === nx).n;
+  const sum = r.notes.reduce((t, n) => t + n[0], 0);
+  const v = sum >= 8 ? { k: 'ok', t: 'İyi geçiş' } : sum <= -8 ? { k: 'no', t: 'Sakıncalı geçiş' } : { k: 'nil', t: 'Nötr geçiş' };
+  $('trans').innerHTML = `${bdg(v)} <span class="raw eng-only">${sum > 0 ? '+' : ''}${sum}</span> ${r.notes.length ? r.notes.map(n => n[1].replace(key + ': ', '')).join(' · ') : 'Belirgin etki yok'}`;
+}
+
+// ---------- Share / print / CSV ----------
+$('share').addEventListener('click', async () => {
+  if (!S.last) return;
+  const top = S.last.P.top[0], text = `FieldShift münavebe planı (${$('lat').value}, ${$('lon').value})\n${$('sumTitle').innerText}. ${$('lead').innerText}\n\nPlan: ${top.seq.map((c, i) => `${i + 1}. yıl ${c.n}`).join(', ')}\nKaynak: NASA POWER, MODIS, SoilGrids${S.demo ? ' (örnek – sentetik veri)' : ''}`;
+  try { if (navigator.share) { await navigator.share({ title: 'FieldShift münavebe planı', text }); return; } await navigator.clipboard.writeText(text); toast('Plan kopyalandı; WhatsApp veya SMS’e yapıştırabilirsin'); }
+  catch (e) { if (e.name !== 'AbortError') toast('Paylaşılamadı: ' + e.message, 'alert'); }
+});
+$('print').addEventListener('click', () => print());
+$('csv').addEventListener('click', () => {
+  if (!S.data) return;
+  const d = S.data; let csv = 'yil,ay,' + FS.POWER_PARAMS.join(',') + '\n';
+  d._years.forEach(y => { for (let m = 0; m < 12; m++) csv += `${y},${m + 1},` + FS.POWER_PARAMS.map(k => d[k] && d[k][y] ? (d[k][y][m] ?? '') : '').join(',') + '\n'; });
+  if (S.ndvi.length) { csv += '\ntarih,NDVI\n' + S.ndvi.map(p => `${p.d},${p.v ?? ''}`).join('\n'); }
+  const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob(['﻿' + csv], { type: 'text/csv;charset=utf-8' }));
+  a.download = `fieldshift_${$('lat').value}_${$('lon').value}${S.demo ? '_SENTETIK' : ''}.csv`; a.click(); setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+  toast(`${d._years.length} yıllık veri indirildi`, 'download');
+});
+
+// ---------- Charts ----------
+function renderClimate(first, last, drought) {
+  const a = S.an, b = S.base, r = S.rec;
+  const sumR = c => c.R.reduce((s, v) => s + (v || 0), 0);
+  const rB = sumR(b), rR = sumR(r), tB = FS.mean(b.T), tR = FS.mean(r.T), wB = FS.mean(b.W), wR = FS.mean(r.W);
+  const hotB = b.TX.filter(v => v >= 32).length, hotR = r.TX.filter(v => v >= 32).length;
+  const nd = FS.ndviSummary(S.ndvi);
+  $('climTitle').textContent = `${first}–${last}: yağış ${sign(rR - rB)}${fmt((rR - rB) / rB * 100)} %, sıcaklık ${sign(tR - tB)}${fmt(tR - tB, 1)} °C`;
+  const cls = (v, good) => v === 0 ? '' : ((v > 0) === good ? 'up' : 'down');
+  const card = (t, v, sub, c, k) => `<div class="card"><div class="card__t">${t}</div><div class="stat__v ${c || ''}" data-k="c-${k}">${v}</div><div class="stat__s">${sub}</div></div>`;
+  $('cards').innerHTML =
+    card('Yıllık yağış', `${fmtN(rR)} mm`, `${b.y0}–${b.y1}: ${fmtN(rB)} mm`, cls(rR - rB, true), 'r') +
+    card('Ortalama sıcaklık', `${fmt(tR, 1)} °C`, `${sign(tR - tB)}${fmt(tR - tB, 2)} °C · eğilim ${sign(a.tempSlope)}${fmt(a.tempSlope * 10, 2)} °C/10 yıl`, cls(tR - tB, false), 't') +
+    card('Kök bölgesi nemi', fmt(wR, 2), `İlk dönem ${fmt(wB, 2)} · eğilim ${sign(a.wetSlope)}${fmt((a.wetSlope || 0) * 10, 3)}/10 yıl`, cls(wR - wB, true), 'w') +
+    card('Sıcak ay (maks. ≥ 32 °C)', `${hotR} ay`, `İlk dönem ${hotB} ay`, cls(hotR - hotB, false), 'h') +
+    card('Kuraklık baskısı', `${Math.round(drought * 100)}/100`, 'Nem ve yağış eğilimi + senaryo', drought > .4 ? 'down' : '', 'dr') +
+    (nd.years.length ? card('NDVI zirvesi (son yıl)', fmt(nd.peak[nd.peak.length - 1], 2), `${nd.years[0]}: ${fmt(nd.peak[0], 2)} · ${nd.slope < 0 ? 'zayıflıyor' : 'sabit / güçleniyor'}`, nd.slope < 0 ? 'down' : 'up', 'nd') : '');
+  drawAnnual(); drawMonthly(); drawWet(); drawNdvi();
+}
+function svgOf(id) { return $(id).querySelector('svg'); }
+const drawers = new WeakMap();
+const ro = new ResizeObserver(es => es.forEach(e => { const f = drawers.get(e.target); if (f) f(); }));
+function bindDraw(s, draw) { const safe = () => { if (s.clientWidth > 60 && s.clientHeight > 60) draw(); }; if (!drawers.has(s)) ro.observe(s); drawers.set(s, safe); safe(); }
+const tip = $('tip'), huds = new WeakMap();
+function hud(s, n, xOf, text) {
+  huds.set(s, { n, xOf, text });
+  if (s.dataset.hud) return; s.dataset.hud = 1;
+  const move = e => {
+    const h = huds.get(s); if (!h || !h.n) return;
+    const r = s.getBoundingClientRect(), px = e.clientX - r.left;
+    let bi = 0, bd = Infinity; for (let i = 0; i < h.n; i++) { const d = Math.abs(h.xOf(i) - px); if (d < bd) { bd = d; bi = i; } }
+    const t = h.text(bi); if (t == null) return hide();
+    const xh = s.querySelector('.xh'); if (xh) { const x = h.xOf(bi); xh.setAttribute('x1', x); xh.setAttribute('x2', x); xh.style.display = ''; }
+    tip.innerHTML = t; tip.style.display = 'block';
+    const tw = tip.offsetWidth, th = tip.offsetHeight;
+    let lx = e.clientX + 14, ly = e.clientY - th - 12;
+    if (lx + tw > innerWidth - 8) lx = e.clientX - tw - 14;
+    if (ly < 8) ly = e.clientY + 16;
+    tip.style.left = Math.max(8, lx) + 'px'; tip.style.top = ly + 'px';
+  };
+  const hide = () => { tip.style.display = 'none'; const xh = s.querySelector('.xh'); if (xh) xh.style.display = 'none'; };
+  s.addEventListener('pointermove', move); s.addEventListener('pointerdown', move); s.addEventListener('pointerleave', hide);
+}
+const XH = (pad, H) => `<line class="xh" x1="0" x2="0" y1="${pad.t}" y2="${H - pad.b}" stroke="currentColor" stroke-width="1" opacity=".5" style="display:none"/>`;
+addEventListener('scroll', () => { tip.style.display = 'none'; }, { passive: true });
+const TX = (x, y, s, anchor = 'middle') => `<text x="${x}" y="${y}" font-size="11" text-anchor="${anchor}" fill="currentColor" opacity=".75">${s}</text>`;
+function axisY(W, H, pad, lo, hi, n, f, side) {
+  let s = ''; for (let i = 0; i <= n; i++) { const v = lo + (hi - lo) * i / n, y = H - pad.b - (H - pad.t - pad.b) * i / n; s += side === 'r' ? TX(W - pad.r + 6, y + 4, f(v), 'start') : `<line x1="${pad.l}" x2="${W - pad.r}" y1="${y}" y2="${y}" stroke="currentColor" opacity=".1"/>` + TX(pad.l - 8, y + 4, f(v), 'end'); }
+  return s;
+}
+function nice(lo, hi) { const p = (hi - lo) * 0.08 || 1; return [lo - p, hi + p]; }
+function drawAnnual() {
+  const s = svgOf('f1'), a = S.an; const draw = () => {
+    const W = s.clientWidth, H = s.clientHeight, pad = { l: 44, r: 36, t: 48, b: 26 }, n = a.years.length; if (!n) return;
+    const rMax = Math.max(...a.rain) * 1.1, [tl, th] = nice(Math.min(...a.temp), Math.max(...a.temp));
+    const x = i => pad.l + (W - pad.l - pad.r) * (i + .5) / n, bw = (W - pad.l - pad.r) / n * .7;
+    const yr = v => H - pad.b - (H - pad.t - pad.b) * v / rMax, yt = v => H - pad.b - (H - pad.t - pad.b) * (v - tl) / (th - tl);
+    let g = axisY(W, H, pad, 0, rMax, 4, v => Math.round(v)) + axisY(W, H, pad, tl, th, 4, v => v.toFixed(1), 'r');
+    a.rain.forEach((v, i) => g += `<rect x="${x(i) - bw / 2}" y="${yr(v)}" width="${bw}" height="${H - pad.b - yr(v)}" rx="1.5" fill="var(--rain)" opacity=".6"/>`);
+    g += `<polyline fill="none" stroke="var(--heat)" stroke-width="2.25" stroke-linejoin="round" points="${a.temp.map((v, i) => x(i) + ',' + yt(v)).join(' ')}"/>`;
+    const step = W < 520 ? 6 : 3; a.years.forEach((y, i) => { if (i % step === 0 || i === n - 1) g += TX(x(i), H - 8, y); });
+    s.innerHTML = g + XH(pad, H);
+    hud(s, n, x, i => `<b>${a.years[i]}</b><br>Yağış ${Math.round(a.rain[i])} mm<br>Sıcaklık ${fmt(a.temp[i], 1)} °C` + (a.wet[i] != null ? `<br>Kök nemi ${fmt(a.wet[i], 2)}` : '')); }; bindDraw(s, draw);
+}
+function drawMonthly() {
+  const s = svgOf('f2'), b = S.base, r = S.rec; const draw = () => {
+    const W = s.clientWidth, H = s.clientHeight, pad = { l: 40, r: 36, t: 48, b: 26 };
+    const rMax = Math.max(...b.R, ...r.R) * 1.15, [tl, th] = nice(Math.min(...b.T, ...r.T), Math.max(...b.T, ...r.T));
+    const x = i => pad.l + (W - pad.l - pad.r) * (i + .5) / 12, bw = (W - pad.l - pad.r) / 12 * .36;
+    const yr = v => H - pad.b - (H - pad.t - pad.b) * v / rMax, yt = v => H - pad.b - (H - pad.t - pad.b) * (v - tl) / (th - tl);
+    let g = axisY(W, H, pad, 0, rMax, 4, v => Math.round(v)) + axisY(W, H, pad, tl, th, 4, v => v.toFixed(0), 'r');
+    for (let i = 0; i < 12; i++) g += `<rect x="${x(i) - bw}" y="${yr(b.R[i])}" width="${bw}" height="${H - pad.b - yr(b.R[i])}" rx="1.5" fill="var(--rain)" opacity=".3"/><rect x="${x(i)}" y="${yr(r.R[i])}" width="${bw}" height="${H - pad.b - yr(r.R[i])}" rx="1.5" fill="var(--rain)" opacity=".8"/>`;
+    g += `<polyline fill="none" stroke="var(--heat)" stroke-width="2" stroke-dasharray="4 3" opacity=".55" points="${b.T.map((v, i) => x(i) + ',' + yt(v)).join(' ')}"/><polyline fill="none" stroke="var(--heat)" stroke-width="2.25" points="${r.T.map((v, i) => x(i) + ',' + yt(v)).join(' ')}"/>`;
+    'OŞMNMHTAEEKA'.split('').forEach((m, i) => g += TX(x(i), H - 8, m));
+    s.innerHTML = g + XH(pad, H);
+    const AY = ['Ocak', 'Şubat', 'Mart', 'Nisan', 'Mayıs', 'Haziran', 'Temmuz', 'Ağustos', 'Eylül', 'Ekim', 'Kasım', 'Aralık'];
+    hud(s, 12, x, i => `<b>${AY[i]}</b><br>Yağış ${fmt(b.R[i])} → ${fmt(r.R[i])} mm<br>Sıcaklık ${fmt(b.T[i], 1)} → ${fmt(r.T[i], 1)} °C<br><span style="opacity:.7">${b.y0}–${b.y1} → ${r.y0}–${r.y1}</span>`); }; bindDraw(s, draw);
+}
+function drawLine(id, xs, ys, color, fmtY, labelEvery, tipOf) {
+  const s = svgOf(id); const draw = () => {
+    const W = s.clientWidth, H = s.clientHeight, pad = { l: 44, r: 16, t: 48, b: 26 }; const v = ys.filter(q => q != null);
+    if (!v.length) { s.innerHTML = `<text x="${W / 2}" y="${H / 2}" text-anchor="middle" fill="currentColor" opacity=".7" font-size="14">Bu parsel için veri alınamadı</text>`; return; }
+    const [lo, hi] = nice(Math.min(...v), Math.max(...v)), n = xs.length;
+    const x = i => pad.l + (W - pad.l - pad.r) * i / Math.max(1, n - 1), y = q => H - pad.b - (H - pad.t - pad.b) * (q - lo) / (hi - lo);
+    let g = axisY(W, H, pad, lo, hi, 4, fmtY);
+    const segs = []; let cur = [];
+    ys.forEach((q, i) => { if (q == null || isNaN(q)) { if (cur.length) segs.push(cur); cur = []; } else cur.push(x(i).toFixed(1) + ',' + y(q).toFixed(1)); });
+    if (cur.length) segs.push(cur);
+    segs.forEach(sg => { if (sg.length === 1) { const [cx, cy] = sg[0].split(','); g += `<circle cx="${cx}" cy="${cy}" r="2.5" fill="${color}"/>`; } else g += `<polyline fill="none" stroke="${color}" stroke-width="2.25" stroke-linejoin="round" points="${sg.join(' ')}"/>`; });
+    const idx = xs.map((_, i) => i), sl = FS.slope(idx, ys);
+    if (sl != null) { const ok = idx.filter(i => ys[i] != null && !isNaN(ys[i])), m = FS.mean(ok.map(i => ys[i])), mi = FS.mean(ok); g += `<line x1="${x(0)}" y1="${y(m + sl * (0 - mi))}" x2="${x(n - 1)}" y2="${y(m + sl * (n - 1 - mi))}" stroke="currentColor" stroke-dasharray="5 4" opacity=".45"/>`; }
+    const step = Math.ceil(n / (W < 520 ? 4 : 8)); xs.forEach((l, i) => { if (i % step === 0) g += TX(x(i), H - 8, labelEvery(l)); });
+    s.innerHTML = g + XH(pad, H);
+    hud(s, n, x, i => ys[i] == null || isNaN(ys[i]) ? `<b>${xs[i]}</b><br>veri yok` : tipOf(i)); }; bindDraw(s, draw);
+}
+function drawWet() { const a = S.an; drawLine('f3', a.years, a.wet, 'var(--rain)', v => v.toFixed(2), y => y, i => `<b>${a.years[i]}</b><br>Kök bölgesi nemi ${fmt(a.wet[i], 3)}`); }
+function drawNdvi() {
+  const nd = S.ndvi, peaks = FS.ndviSummary(nd), pk = {}; peaks.years.forEach((y, k) => pk[y] = peaks.peak[k]);
+  drawLine('f4', nd.map(p => p.d), nd.map(p => p.v), 'var(--accent)', v => v.toFixed(2), d => d.slice(0, 7),
+    i => { const y = +nd[i].d.slice(0, 4); return `<b>${nd[i].d}</b><br>NDVI ${fmt(nd[i].v, 3)}<br>${y} zirvesi ${fmt(pk[y], 2)}`; });
+}
+
+// First paint: show skeleton briefly, then the sample field so the page is never empty.
+$('skeleton').hidden = false;
+setTimeout(() => runDemo(false), 350);
+}
+</script>
+</body>
+</html>
