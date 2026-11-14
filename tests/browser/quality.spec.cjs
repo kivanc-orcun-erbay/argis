@@ -51,6 +51,8 @@ for (const view of ['farm', 'eng']) {
   test(`accessibility: no serious or critical axe violations (${view} view)`, async ({ page }) => {
     await ready(page);
     if (view === 'eng') await page.locator('#vEng').click();
+    // Sections fade in (0.22 s); scanning mid-fade measures half-transparent text as low contrast.
+    await page.waitForFunction(() => document.getAnimations().every(a => a.playState !== 'running'));
     // The Leaflet map is third-party; its own controls are out of scope here.
     const res = await new AxeBuilder({ page }).exclude('#map').withTags(['wcag2a', 'wcag2aa']).analyze();
     const bad = res.violations.filter(v => ['serious', 'critical'].includes(v.impact));
