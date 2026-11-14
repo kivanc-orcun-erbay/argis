@@ -72,9 +72,11 @@ test('farmer / engineer views show and hide the technical sections, and the choi
 });
 
 test('clicking the map shows the parcel card with coordinates and the TKGM link', async ({ page }) => {
-  const map = page.locator('#map');
+  const map = page.locator('#map.leaflet-container');
+  await expect(map).toBeVisible();
   const box = await map.boundingBox();
-  await page.mouse.click(box.x + box.width * 0.3, box.y + box.height * 0.7);
+  // Click the map element itself (scrolled into view, checked for overlays), away from marker and controls.
+  await map.click({ position: { x: Math.round(box.width * 0.3), y: Math.round(box.height * 0.7) } });
   await expect(page.locator('#parcel')).toBeVisible();
   await expect(page.locator('#parcel')).toContainText('Seçtiğin nokta');
   await expect(page.locator('#parcel a')).toHaveAttribute('href', 'https://parselsorgu.tkgm.gov.tr/');
