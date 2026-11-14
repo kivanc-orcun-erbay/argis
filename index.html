@@ -38,7 +38,7 @@
   --r-in-lg:calc(var(--r-lg) - var(--pad-tight));   /* 12 */
 
   /* type scale */
-  --f-xs:12px; --f-sm:14px; --f-md:16px; --f-lg:18px; --f-xl:22px; --f-2xl:28px; --f-3xl:40px;
+  --f-xs:13px; --f-sm:14px; --f-md:16px; --f-lg:18px; --f-xl:22px; --f-2xl:28px; --f-3xl:40px;
   --font:"Overpass",system-ui,sans-serif;
   --mono:"Red Hat Mono",ui-monospace,monospace;
 
@@ -85,7 +85,7 @@ body.eng .farm-only{display:none!important}
 .hdr{display:flex;align-items:center;gap:var(--s4);flex-wrap:wrap;padding:var(--s4) clamp(16px,3vw,40px);border-bottom:1px solid var(--line);background:var(--surface)}
 .hdr p{color:var(--ink-3);font-size:var(--f-sm)}
 .seg-ctl{margin-left:auto;display:inline-flex;padding:var(--pad-tight);gap:2px;background:var(--surface-2);border-radius:var(--r-md)}
-.seg-ctl button{min-height:36px;padding:0 var(--s4);border:0;border-radius:var(--r-in-md);background:transparent;color:var(--ink-2);font:600 var(--f-sm) var(--font);cursor:pointer;transition:background var(--t-fast),color var(--t-fast)}
+.seg-ctl button{min-height:40px;padding:0 var(--s4);border:0;border-radius:var(--r-in-md);background:transparent;color:var(--ink-2);font:600 var(--f-sm) var(--font);cursor:pointer;transition:background var(--t-fast),color var(--t-fast)}
 .seg-ctl button[aria-pressed=true]{background:var(--surface);color:var(--ink);box-shadow:0 0 0 1px var(--line)}
 
 /* ---------- how it works ---------- */
@@ -112,7 +112,7 @@ input[type=range]{width:100%;accent-color:var(--accent)}
 :focus-visible{outline:2px solid var(--accent);outline-offset:2px}
 
 .chips{display:flex;flex-wrap:wrap;gap:var(--s2)}
-.pbtn{display:inline-flex;align-items:center;gap:6px;min-height:36px;padding:0 var(--s3);border:1px solid var(--line-strong);border-radius:var(--r-pill);background:var(--surface);font-size:var(--f-sm);font-weight:600;cursor:pointer;transition:border-color var(--t-fast),background var(--t-fast)}
+.pbtn{display:inline-flex;align-items:center;gap:6px;min-height:40px;padding:0 var(--s3);border:1px solid var(--line-strong);border-radius:var(--r-pill);background:var(--surface);font-size:var(--f-sm);font-weight:600;cursor:pointer;transition:border-color var(--t-fast),background var(--t-fast)}
 .pbtn:hover{border-color:var(--ink-3)}
 .pbtn[aria-pressed=true]{border-color:var(--accent);background:var(--accent-soft);color:var(--ink)}
 .pbtn .i{margin-left:-2px}                       /* optical: icon side looks heavier */
@@ -151,7 +151,7 @@ input[type=range]{width:100%;accent-color:var(--accent)}
 .cta:active{transform:scale(.985)}
 .cta .i{margin-right:-4px}                        /* optical: arrow sits tight to label */
 .cta:disabled{cursor:progress;opacity:.85}
-.linkbtn{align-self:center;border:0;background:none;color:var(--ink-2);font-size:var(--f-sm);font-weight:600;text-decoration:underline;text-underline-offset:3px;cursor:pointer;padding:var(--s1) var(--s2)}
+.linkbtn{align-self:center;min-height:40px;border:0;background:none;color:var(--ink-2);font-size:var(--f-sm);font-weight:600;text-decoration:underline;text-underline-offset:3px;cursor:pointer;padding:var(--s1) var(--s2)}
 .linkbtn:hover{color:var(--ink)}
 #status{font-size:var(--f-sm);color:var(--ink-3);min-height:20px;text-align:center}
 #status .ok{color:var(--ok)} #status .err{color:var(--bad)}
@@ -219,7 +219,7 @@ input[type=range]{width:100%;accent-color:var(--accent)}
 .shiftline s{color:var(--ink-3);text-decoration-thickness:1px}
 .tag{display:inline-block;margin-left:6px;padding:0 6px;border-radius:var(--r-xs);background:var(--surface-2);color:var(--ink-3);font-size:11px;font-weight:600;line-height:18px;white-space:nowrap;vertical-align:1px}
 .yr__src{font-size:var(--f-xs);color:var(--ink-3);line-height:1.35}
-.pat-grid{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.1fr);gap:var(--s4)}
+.pat-grid{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.1fr);gap:var(--s4);align-items:start}
 .trend-list{margin:0;padding:0;list-style:none;display:flex;flex-direction:column}
 .trend-list li{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:2px var(--s3);padding:var(--s2) 0;border-top:1px solid var(--line);align-items:center}
 .trend-list li:first-child{border-top:0}
@@ -296,6 +296,19 @@ td .sub{font-size:var(--f-xs);color:var(--ink-3)}
 @keyframes flash{0%{background:var(--accent-soft);box-shadow:0 0 0 4px var(--accent-soft)}100%{background:transparent;box-shadow:0 0 0 4px transparent}}
 #toast{position:fixed;left:50%;bottom:var(--s5);transform:translate(-50%,16px);opacity:0;z-index:1001;display:flex;align-items:center;gap:var(--s2);padding:var(--s3) var(--s4);border-radius:var(--r-md);background:var(--ink);color:var(--bg);font-size:var(--f-sm);font-weight:600;pointer-events:none;transition:opacity var(--t-med),transform var(--t-med) var(--ease-out)}
 #toast.show{opacity:1;transform:translate(-50%,0)}
+#toast{max-width:min(92vw,680px)}
+#toast.show.has-action{pointer-events:auto}
+#toast button{flex:none;min-height:36px;padding:0 var(--s3);border:1px solid currentColor;border-radius:var(--r-sm);background:transparent;color:inherit;font:700 var(--f-sm) var(--font);cursor:pointer}
+#toast button:focus-visible{outline:2px solid var(--bg);outline-offset:2px}
+.panel-links{display:flex;justify-content:center;flex-wrap:wrap;gap:var(--s2) var(--s4)}
+.evidence{font-size:var(--f-sm);color:var(--ink-3)}
+.evidence summary{display:block;padding:8px 0;cursor:pointer;list-style:none;font-weight:600;color:var(--ink-2);line-height:1.45}
+.evidence summary .i{vertical-align:-3px;margin-right:6px}
+.evidence summary .more{margin-left:8px;white-space:nowrap}
+.evidence summary::-webkit-details-marker{display:none}
+.evidence summary .more{text-decoration:underline;text-underline-offset:3px;color:var(--ink-3);font-weight:600}
+.evidence[open] summary .more{display:none}
+.evidence p{margin-top:var(--s2);padding:var(--s3) var(--s4);border-radius:var(--r-sm);background:var(--warn-bg);color:var(--warn);max-width:72ch;line-height:1.5}
 @media (prefers-reduced-motion: reduce){
   *,*::before,*::after{animation-duration:1ms!important;animation-iteration-count:1!important;transition-duration:1ms!important}
   .spin{animation:sp 2.4s linear infinite!important}
@@ -448,7 +461,6 @@ td .sub{font-size:var(--f-xs);color:var(--ink-3)}
         <button type="button" class="opt goal" data-goal="toprak" aria-pressed="false"><svg class="i"><use href="#i-sprout"/></svg><span><b>Toprağı dinlendir</b><small>Bakliyat ve fiğle gübre tasarrufu</small></span></button>
         <button type="button" class="opt goal" data-goal="denge" aria-pressed="true"><svg class="i"><use href="#i-scale"/></svg><span><b>Dengeli</b><small>Su, toprak ve kazanç birlikte</small></span></button>
       </div>
-      <label class="opt" for="hot"><input type="checkbox" id="hot"><span><b>Daha sıcak ve kurak yılları dene</b><small>+2 °C ve %20 az yağışla plan dayanır mı? Tahmin değil, dayanıklılık testi.</small></span></label>
       <div class="tune eng-only">
         <div class="lbl sm"><span>Ağırlıklar <span id="goalTag" class="muted"></span></span></div>
         <div class="field"><label class="lbl" for="pW"><span>Su</span><output id="vW">50</output></label><input type="range" id="pW" min="0" max="100" value="50"></div>
@@ -459,6 +471,11 @@ td .sub{font-size:var(--f-xs);color:var(--ink-3)}
       </div>
     </div>
 
+    <div class="group">
+      <h3>Senaryo</h3>
+      <label class="opt" for="hot"><input type="checkbox" id="hot"><span><b>Daha sıcak ve kurak yılları dene</b><small>+2 °C ve %20 az yağışla plan dayanır mı? Tahmin değil, dayanıklılık testi.</small></span></label>
+    </div>
+
     <div class="cta-wrap">
       <button class="cta" id="go"><span>Münavebe planımı çıkar</span><svg class="i"><use href="#i-arrow"/></svg></button>
       <ul class="sources" id="srcStatus" hidden aria-live="polite">
@@ -466,8 +483,8 @@ td .sub{font-size:var(--f-xs);color:var(--ink-3)}
         <li data-src="modis"><span class="ind"></span>MODIS yeşillik</li>
         <li data-src="soil"><span class="ind"></span>SoilGrids toprak</li>
       </ul>
-      <div id="status" role="status" aria-live="polite">Tarlanı seç ve planını çıkar.</div>
-      <button class="linkbtn" id="demo" type="button">ya da sentetik örneği göster</button>
+      <div id="status" role="status" aria-live="polite">Tarlanı seç, sonra “Münavebe planımı çıkar”a bas.</div>
+      <div class="panel-links"><button class="linkbtn" id="reset" type="button" hidden>Varsayılanlara dön</button><button class="linkbtn" id="demo" type="button">ya da sentetik örneği göster</button></div>
     </div>
   </div>
 </section>
@@ -486,7 +503,7 @@ td .sub{font-size:var(--f-xs);color:var(--ink-3)}
     <h2 class="hero-title" id="planTitle"></h2>
     <p class="shiftline" id="planShift"></p>
     <p class="muted sm" id="planSub"></p>
-    <p class="notice" id="evidenceNote" aria-live="polite"></p>
+    <details class="evidence" id="evidenceBox"><summary><svg class="i i--sm" aria-hidden="true"><use href="#i-alert"/></svg><span id="evidenceSum"></span><span class="more">Ayrıntı</span></summary><p id="evidenceNote" aria-live="polite"></p></details>
   </header>
   <div class="hero-grid">
     <div>
@@ -516,7 +533,7 @@ td .sub{font-size:var(--f-xs);color:var(--ink-3)}
 
 <section class="band" id="sumBand" hidden>
   <header>
-    <p class="eyebrow">Tarlanın son 10 yılı</p>
+    <p class="eyebrow">Tarlanın son 10 yılı · NASA POWER ve MODIS</p>
     <h2 id="sumTitle"></h2>
   </header>
   <p class="lead" id="lead" style="margin-bottom:var(--s5)"></p>
@@ -554,7 +571,7 @@ td .sub{font-size:var(--f-xs);color:var(--ink-3)}
 
 <section class="band" id="suitBand" hidden>
   <header>
-    <p class="eyebrow">Ürün uygunluğu</p>
+    <p class="eyebrow" id="suitEyebrow">Ürün uygunluğu · 13 ürün</p>
     <h2 id="suitTitle"></h2>
   </header>
   <div class="scroll" tabindex="0" role="region" aria-label="Ürün uygunluk tablosu">
@@ -1111,7 +1128,16 @@ try { setView(localStorage.getItem('fs-view') === 'eng'); } catch (e) { setView(
 
 // ---------- Feedback: toast, flash, enter ----------
 let toastT;
-function toast(msg, icon = 'check') { const t = $('toast'); t.innerHTML = ico(icon) + `<span>${msg}</span>`; t.classList.add('show'); clearTimeout(toastT); toastT = setTimeout(() => t.classList.remove('show'), 2600); }
+function toast(msg, icon = 'check', action) {
+  const t = $('toast'); t.innerHTML = ico(icon) + `<span>${msg}</span>`;
+  if (action) { const b = document.createElement('button'); b.type = 'button'; b.textContent = action.label; b.addEventListener('click', () => { t.classList.remove('show'); action.fn(); }); t.append(b); }
+  t.classList.toggle('has-action', !!action); t.classList.add('show');
+  clearTimeout(toastT); toastT = setTimeout(() => t.classList.remove('show'), action ? 7000 : 2600);
+}
+// Keep an actionable message open while the pointer or keyboard focus is on it.
+$('toast').addEventListener('mouseenter', () => clearTimeout(toastT));
+$('toast').addEventListener('focusin', () => clearTimeout(toastT));
+$('toast').addEventListener('mouseleave', () => { toastT = setTimeout(() => $('toast').classList.remove('show'), 2600); });
 const prevVals = new Map(); let firstRender = true;
 function flashChanged() {
   document.querySelectorAll('[data-k]').forEach(el => {
@@ -1182,12 +1208,12 @@ function lookupParcel(lat, lon) {
   });
 }
 const pressPreset = btn => document.querySelectorAll('.pbtn[data-ll]').forEach(b => b.setAttribute('aria-pressed', b === btn));
-map.on('click', e => { $('lat').value = e.latlng.lat.toFixed(4); $('lon').value = e.latlng.lng.toFixed(4); marker.setLatLng(e.latlng); pressPreset(null); lookupParcel(e.latlng.lat, e.latlng.lng); status('Tarla işaretlendi. Planını çıkar.'); });
+map.on('click', e => { $('lat').value = e.latlng.lat.toFixed(4); $('lon').value = e.latlng.lng.toFixed(4); marker.setLatLng(e.latlng); pressPreset(null); lookupParcel(e.latlng.lat, e.latlng.lng); status('Tarla işaretlendi. “Münavebe planımı çıkar”a bas.'); });
 const setLoc = (lat, lon, z) => { $('lat').value = (+lat).toFixed(4); $('lon').value = (+lon).toFixed(4); marker.setLatLng([lat, lon]); map.setView([lat, lon], z || map.getZoom()); };
 document.querySelectorAll('.pbtn[data-ll]').forEach(b => b.addEventListener('click', () => {
   const [la, lo] = b.dataset.ll.split(',').map(Number); setLoc(la, lo, 11); pressPreset(b);
-  if (loadSnap(b.dataset.snap, true)) status(`${b.textContent}: ${SNAP[b.dataset.snap].fetched} tarihli kayıtlı NASA verisi. Güncellemek için planını çıkar.`, 'ok');
-  else status(`${b.textContent} seçildi. Planını çıkar.`);
+  if (loadSnap(b.dataset.snap, true)) status(`${b.textContent}: ${SNAP[b.dataset.snap].fetched} tarihli kayıtlı NASA verisi. Güncel veri için “Münavebe planımı çıkar”a bas.`, 'ok');
+  else status(`${b.textContent} seçildi. “Münavebe planımı çıkar”a bas.`);
 }));
 const geoLabel = $('geo').innerHTML;
 $('geo').addEventListener('click', () => {
@@ -1195,7 +1221,7 @@ $('geo').addEventListener('click', () => {
   $('geo').disabled = true; $('geo').innerHTML = '<span class="spin" style="width:14px;height:14px"></span><span>Konum alınıyor…</span>';
   const done = () => { $('geo').disabled = false; $('geo').innerHTML = geoLabel; };
   navigator.geolocation.getCurrentPosition(
-    p => { done(); setLoc(p.coords.latitude, p.coords.longitude, 13); pressPreset(null); lookupParcel(p.coords.latitude, p.coords.longitude); status(`Konum bulundu (±${Math.round(p.coords.accuracy)} m). Planını çıkar.`, 'ok'); },
+    p => { done(); setLoc(p.coords.latitude, p.coords.longitude, 13); pressPreset(null); lookupParcel(p.coords.latitude, p.coords.longitude); status(`Konum bulundu (±${Math.round(p.coords.accuracy)} m). “Münavebe planımı çıkar”a bas.`, 'ok'); },
     e => { done(); status('Konum alınamadı: ' + (e.code === 1 ? 'izin verilmedi' : e.code === 3 ? 'zaman aşımı' : 'konum belirlenemedi') + '.', 'err'); },
     { enableHighAccuracy: true, timeout: 15000, maximumAge: 60000 });
 });
@@ -1208,9 +1234,9 @@ $('next').innerHTML = '<option value="">Sen öner</option>' + FS.CROPS.concat([F
 const sl = () => { $('goalTag').textContent = S.goal ? `· hedef: ${GOALN[S.goal]}` : '· özel ayar'; $('vW').textContent = $('pW').value; $('vS').textContent = $('pS').value; $('vI').textContent = $('pI').value; $('vT').textContent = '+' + (+$('dT').value).toFixed(1); $('vP').textContent = (+$('dP').value > 0 ? '+' : '') + $('dP').value; $('hot').checked = +$('dT').value >= 2 && +$('dP').value <= -20; };
 $('hot').addEventListener('change', () => {
   const on = $('hot').checked; $('dT').value = on ? 2 : 0; $('dP').value = on ? -20 : 0; sl();
-  if (S.data) { compute(); toast(on ? 'Plan +2 °C ve %20 az yağışa göre yeniden hesaplandı' : 'Plan bugünkü iklime göre hesaplandı', 'sun'); }
+  if (S.data) { compute(); if (!S.changedToast) toast(on ? 'Plan +2 °C ve %20 az yağışa göre yeniden hesaplandı' : 'Plan bugünkü iklime göre hesaplandı', 'sun'); }
 });
-['pW', 'pS', 'pI', 'dT', 'dP'].forEach(id => $(id).addEventListener('input', () => { setGoal(null); sl(); if (S.data) compute(); }));
+['pW', 'pS', 'pI', 'dT', 'dP'].forEach(id => $(id).addEventListener('input', () => { setGoal(null); sl(); if (S.data) compute('slider'); }));
 document.querySelectorAll('.goal').forEach(b => b.addEventListener('click', () => { setGoal(b.dataset.goal); sl(); if (S.data) compute(); }));
 ['prev', 'next', 'years', 'irr', 'kirac', 'soilType', 'ph', 'clay', 'lime', 'ec', 'area', 'urea', 'baseMode', 'nLo', 'nHi'].forEach(id => $(id).addEventListener('change', () => {
   if (id === 'lime' || id === 'ec') S.lab[id] = $(id).value === '' ? null : Math.max(0, +$(id).value);
@@ -1219,6 +1245,30 @@ document.querySelectorAll('.goal').forEach(b => b.addEventListener('click', () =
   if (S.data) compute();
 }));
 setGoal('denge'); sl();
+
+// ---------- Undo and reset ----------
+// Every user-made change that alters the plan offers "Geri al"; "Varsayılanlara dön" appears when settings differ from the defaults.
+const CTRL_IDS = ['prev', 'next', 'years', 'soilType', 'area', 'urea', 'ph', 'clay', 'lime', 'ec', 'pW', 'pS', 'pI', 'dT', 'dP', 'baseMode', 'nLo', 'nHi'];
+function snapshot() {
+  return { v: Object.fromEntries(CTRL_IDS.map(id => [id, $(id).value])), irr: $('irr').checked, goal: S.goal,
+    inc: { ...S.inc }, lab: { ...S.lab }, ozelHidden: $('soilType').querySelector('[value=ozel]').hidden };
+}
+function restore(sn) {
+  CTRL_IDS.forEach(id => { $(id).value = sn.v[id]; });
+  $(sn.irr ? 'irr' : 'kirac').checked = true;
+  S.goal = sn.goal; document.querySelectorAll('.goal').forEach(b => b.setAttribute('aria-pressed', b.dataset.goal === sn.goal));
+  S.inc = { ...sn.inc }; S.lab = { ...sn.lab };
+  $('soilType').querySelector('[value=ozel]').hidden = sn.ozelHidden;
+  if (sn.v.soilType === 'ozel') S.soil = { ph: sn.v.ph === '' ? null : +sn.v.ph, clay: sn.v.clay === '' ? null : +sn.v.clay }; else applySoil();
+  sl();
+}
+const DEFAULTS = snapshot();
+function atDefaults() {
+  const a = snapshot(), d = DEFAULTS;
+  const ids = CTRL_IDS.filter(id => !((id === 'ph' || id === 'clay') && a.v.soilType !== 'ozel'));
+  return ids.every(id => a.v[id] === d.v[id]) && a.irr === d.irr && a.goal === d.goal
+    && JSON.stringify(a.inc) === JSON.stringify(d.inc) && a.lab.lime == null && a.lab.ec == null;
+}
 
 const status = (msg, cls) => { $('status').innerHTML = cls ? `<span class="${cls}">${msg}</span>` : msg; };
 
@@ -1365,6 +1415,7 @@ function liveStatus() {
   status(msg, L.daily ? 'ok' : 'err');
 }
 $('demo').addEventListener('click', () => runDemo(true));
+$('reset').addEventListener('click', () => { restore(DEFAULTS); compute(); if (!S.changedToast) toast('Ayarlar varsayılana döndü', 'check'); });
 function runDemo(scroll) {
   if (busy) return;
   fetchGen++; S.demo = true; S.snap = null; $('demoNote').hidden = false; $('srcStatus').hidden = true;
@@ -1428,6 +1479,7 @@ function compute(scroll) {
   $('skeleton').hidden = true;
   BANDS.forEach(id => { const el = $(id); if (el.hidden) { el.hidden = false; el.classList.add('enter'); } });
   const missingSoil = S.soil.ph == null || S.soil.clay == null;
+  $('evidenceSum').textContent = S.demo ? 'Sentetik örnek · gerçek ölçüm değil' : S.snap ? `Kayıtlı NASA verisi (${S.snap}) · model önerisi, sahada doğrulanmadı` : 'Güncel NASA verisi · model önerisi, sahada doğrulanmadı';
   $('evidenceNote').textContent = (S.demo ? 'Sentetik örnek; gerçek tarla ölçümü değildir. ' : S.snap ? `${S.snap} tarihinde kaydedilmiş gerçek NASA verisi. Model önerisidir; sahada doğrulanmış sonuç değildir. ` : 'Güncel NASA verisi. Model önerisidir; sahada doğrulanmış sonuç değildir. ') +
     (missingSoil ? 'Toprak verisi eksik: sıralama yalnızca bilinen faktörlere dayanır. Puan aralığı, bilinmeyen faktörlerin en kötü/en iyi durumunu gösterir; güven aralığı değildir. ' : 'Toprak değerleri seçilen kaynağa veya kullanıcı girişine dayanır. ') +
     (S.lab.lime != null || S.lab.ec != null ? `Toprak analiz raporundan: ${[S.lab.lime != null && `kireç %${S.lab.lime}`, S.lab.ec != null && `EC ${S.lab.ec} dS/m`].filter(Boolean).join(', ')}; ürün eşikleri yaklaşıktır. ` : '') +
@@ -1445,6 +1497,16 @@ function compute(scroll) {
   renderSuit(sb, sr, ss);
   renderClimate(first, last, drought);
   flashChanged();
+  // scroll === undefined: recomputed because the user changed a setting (not data loading or a slider tick).
+  const planNow = P.top[0] ? seqTxt(P.top[0]) : '';
+  S.changedToast = false;
+  if (scroll === undefined && S.lastPlan && planNow !== S.lastPlan && S.lastSnap) {
+    const back = S.lastSnap, was = S.lastPlan;
+    S.changedToast = true;
+    toast(`Plan değişti: ${planNow}`, 'arrow', { label: 'Geri al', fn: () => { restore(back); compute('undo'); toast(`Önceki plana dönüldü: ${was}`, 'check'); } });
+  }
+  S.lastPlan = planNow; S.lastSnap = snapshot();
+  $('reset').hidden = atDefaults();
   if (scroll === true && innerWidth < 1000) $('planBand').scrollIntoView({ behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth', block: 'start' });
 }
 
@@ -1608,7 +1670,7 @@ function renderShift(Pb, P, sb, ss, irr) {
   const rank = { ok: 2, nil: 2, risk: 1, no: 0 }, worse = [], better = [];
   FS.CROPS.forEach(c => { const a = badge(c, sb[c.id], irr), b = badge(c, ss[c.id], irr); if (rank[b.k] < rank[a.k]) worse.push([c, a, b]); else if (rank[b.k] > rank[a.k]) better.push([c, a, b]); });
   const same = Pb.top[0] && P.top[0] && seqTxt(Pb.top[0]) === seqTxt(P.top[0]);
-  $('shiftEyebrow').textContent = `${S.base.y0}–${S.base.y1} iklimi ile ${S.rec.y0}–${S.rec.y1} iklimi`;
+  $('shiftEyebrow').textContent = `Field Shift · ${S.base.y0}–${S.base.y1} iklimi ile ${S.rec.y0}–${S.rec.y1} iklimi`;
   $('shiftTitle').textContent = same
     ? `İklim kaydı ama en iyi plan aynı kaldı${worse.length ? `; ${worse.length} ürün zorlaştı` : ''}`
     : `İklim kaydığı için plan değişti${worse.length ? `; ${worse.length} ürün zorlaştı` : ''}`;
@@ -1643,12 +1705,14 @@ const NOTE_SRC = [
   [/Kazancı|kazanç/i, 'senin kazanç puanın'],
   [/Toprağa etkisi/, 'ürün özelliği'],
 ];
+// Generic agronomy rules carry no tag, so the tags that remain point at data (NASA, soil, your input).
+const GENERIC_SRC = new Set(['münavebe kuralı', 'ekim takvimi', 'ürün özelliği']);
 const noteSrc = txt => (NOTE_SRC.find(([re]) => re.test(txt)) || [, 'münavebe kuralı'])[1];
 const LIM_SRC = { temp: 'sezon sıcaklığı · POWER T2M', heat: 'kavrulma · POWER T2M_MAX', cold: 'don · POWER T2M_MIN', water: 'su · POWER PRECTOTCORR + GWETROOT', ph: 'pH · {soil}', sal: 'tuzluluk · toprak analizi', lime: 'kireç · toprak analizi', tex: 'kil · {soil}' };
 // pH / clay come from the lab report when the user typed them, otherwise from SoilGrids.
 const soilSrc = () => $('soilType').value === 'ozel' ? 'toprak analizi' : $('soilType').value === 'auto' ? 'SoilGrids' : 'seçilen toprak cinsi';
 const limLine = s => s.lim ? `Sınırlayan: ${LIM_SRC[s.lim].replace('{soil}', soilSrc())}` : 'İklim uygun · POWER T2M, PRECTOTCORR';
-const noteLi = t => `<li>${t[0] > 0 ? ico('check', 'i i--sm pos') : t[0] < 0 ? ico('alert', 'i i--sm neg') : ico('minus', 'i i--sm neu')}<span class="pts eng-only ${t[0] > 0 ? 'pos' : t[0] < 0 ? 'neg' : 'neu'}">${t[0] > 0 ? '+' : ''}${String(t[0]).replace('-', '−')}</span><span>${t[1]}<span class="tag">${noteSrc(t[1])}</span></span></li>`;
+const noteLi = t => `<li>${t[0] > 0 ? ico('check', 'i i--sm pos') : t[0] < 0 ? ico('alert', 'i i--sm neg') : ico('minus', 'i i--sm neu')}<span class="pts eng-only ${t[0] > 0 ? 'pos' : t[0] < 0 ? 'neg' : 'neu'}">${t[0] > 0 ? '+' : ''}${String(t[0]).replace('-', '−')}</span><span>${t[1]}${GENERIC_SRC.has(noteSrc(t[1])) ? '' : `<span class="tag">${noteSrc(t[1])}</span>`}</span></li>`;
 const topNotes = (p, k) => p.notes.slice().sort((a, b) => Math.abs(b[0]) - Math.abs(a[0])).slice(0, k);
 function renderPlans(P, ss, irr) {
   const n = +$('years').value;
@@ -1692,7 +1756,7 @@ function renderSuit(sb, sr, ss) {
   const uncertainN = FS.CROPS.filter(c => ss[c.id].unknown.length).length;
   $('suitTitle').textContent = uncertainN ? `${FS.CROPS.length} ürün değerlendirildi; ${uncertainN} üründe toprak verisi eksik` : `${FS.CROPS.length} üründen ${okN} tanesi modelde uygun`;
   const tb = $('suitT').querySelector('tbody'); tb.innerHTML = rows;
-  tb.querySelectorAll('.inc').forEach(el => el.addEventListener('change', e => { S.inc[e.target.dataset.id] = Math.max(1, Math.min(5, +e.target.value)); compute(); toast('Kazanç puanı güncellendi, plan yeniden hesaplandı'); }));
+  tb.querySelectorAll('.inc').forEach(el => el.addEventListener('change', e => { S.inc[e.target.dataset.id] = Math.max(1, Math.min(5, +e.target.value)); compute(); if (!S.changedToast) toast('Kazanç puanı güncellendi, plan yeniden hesaplandı'); }));
 }
 
 function renderTrans(ss) {

@@ -38,7 +38,8 @@ test('warmer-and-drier toggle recomputes for +2 °C / -20 % and can be undone', 
   await expect(page.locator('#dT')).toHaveValue('2');
   await expect(page.locator('#dP')).toHaveValue('-20');
   await expect(page.locator('#planShift')).toContainText('+2 °C');
-  await expect(page.locator('#toast')).toContainText('+2 °C');
+  // Either the scenario message, or (if the plan changed) the undo message.
+  await expect(page.locator('#toast')).toContainText(/\+2 °C|Plan değişti/);
   await page.locator('label[for="hot"]').click();
   await expect(page.locator('#dT')).toHaveValue('0');
   await expect(page.locator('#planShift')).not.toContainText('senaryosuyla');
@@ -117,4 +118,34 @@ test('climate pattern section: significant warming, Harran 2007-2009 drought, p-
   const before = await page.locator('#patTitle').innerText();
   await page.locator('label[for="hot"]').click();
   await expect(page.locator('#patTitle')).toHaveText(before);
+});
+
+test('undo: a setting that changes the plan can be undone from the message', async ({ page }) => {
+  const before = await page.locator('#planTitle').getAttribute('aria-label');
+  await page.selectOption('#years', '2');
+  await expect(page.locator('#planTitle')).not.toHaveAttribute('aria-label', before);
+  const toastEl = page.locator('#toast');
+  await expect(toastEl).toContainText('Plan değişti');
+  await toastEl.getByRole('button', { name: 'Geri al' }).click();
+  await expect(page.locator('#years')).toHaveValue('3');
+  await expect(page.locator('#planTitle')).toHaveAttribute('aria-label', before);
+  await expect(toastEl).toContainText('Önceki plana dönüldü');
+});
+
+test('reset link appears only when settings differ, and restores the defaults', async ({ page }) => {
+  await expect(page.locator('#reset')).toBeHidden();
+  await page.fill('#area', '55'); await page.locator('#area').dispatchEvent('change');
+  await page.locator('.goal[data-goal="toprak"]').click();
+  await expect(page.locator('#reset')).toBeVisible();
+  await page.locator('#reset').click();
+  await expect(page.locator('#area')).toHaveValue('20');
+  await expect(page.locator('.goal[data-goal="denge"]')).toHaveAttribute('aria-pressed', 'true');
+  await expect(page.locator('#reset')).toBeHidden();
+});
+
+test('evidence note is a one-line summary that opens to the full text', async ({ page }) => {
+  await expect(page.locator('#evidenceSum')).toContainText('model önerisi');
+  await expect(page.locator('#evidenceNote')).toBeHidden();
+  await page.locator('#evidenceBox summary').click();
+  await expect(page.locator('#evidenceNote')).toBeVisible();
 });
