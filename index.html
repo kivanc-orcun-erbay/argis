@@ -90,7 +90,12 @@ body.eng .farm-only{display:none!important}
 .hdr p{color:var(--ink-3);font-size:var(--f-sm)}
 .brand{line-height:0;margin-bottom:var(--s1)}
 .wordmark{display:block;height:44px;width:auto;margin-left:-6px}  /* the A's stroke starts 13/198 in; pull it to the text edge */
-.hdr-ctl{margin-left:auto;display:flex;flex-wrap:wrap;gap:var(--s2)}
+.hdr-ctl{margin-left:auto;display:flex;flex-wrap:wrap;align-items:center;gap:var(--s2)}
+.hdr-link{display:inline-flex;align-items:center;gap:6px;min-height:40px;padding:0 var(--s3);font-size:var(--f-sm);font-weight:600;color:var(--ink-2)}
+.privacy-note{display:flex;gap:6px;align-items:flex-start;margin-top:var(--s2)}
+.privacy-note .i{flex:none;margin-top:2px}
+.privacy{display:grid;grid-template-columns:repeat(auto-fill,minmax(min(100%,300px),1fr));gap:var(--s3);margin-bottom:var(--s4)}
+.privacy .card p{font-size:var(--f-sm);color:var(--ink-2)}
 .seg-ctl{display:inline-flex;padding:var(--pad-tight);gap:2px;background:var(--surface-2);border-radius:var(--r-md)}
 .seg-ctl button{min-height:40px;padding:0 var(--s4);border:0;border-radius:var(--r-in-md);background:transparent;color:var(--ink-2);font:600 var(--f-sm) var(--font);cursor:pointer;transition:background var(--t-fast),color var(--t-fast)}
 .seg-ctl button[aria-pressed=true]{background:var(--surface);color:var(--ink);box-shadow:0 0 0 1px var(--line)}
@@ -349,7 +354,7 @@ td .sub{font-size:var(--f-xs);color:var(--ink-3)}
 @media (max-width:480px){
   .choice,.row,.cmp{grid-template-columns:1fr}
   .hdr-ctl{margin-left:0;width:100%}
-  .hdr-ctl .seg-ctl:first-child{flex:1}
+  .hdr-ctl .seg-ctl:first-of-type{flex:1}
   .seg-ctl button{flex:1}
   .stats{grid-template-columns:1fr}
 }
@@ -388,6 +393,7 @@ td .sub{font-size:var(--f-xs);color:var(--ink-3)}
   <symbol id="i-x" viewBox="0 0 24 24"><path d="M18 6 6 18M6 6l12 12"/></symbol>
   <symbol id="i-alert" viewBox="0 0 24 24"><path d="m21.7 18-8-14a2 2 0 0 0-3.4 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.7-3"/><path d="M12 9v4M12 17h.01"/></symbol>
   <symbol id="i-minus" viewBox="0 0 24 24"><path d="M5 12h14"/></symbol>
+  <symbol id="i-lock" viewBox="0 0 24 24"><rect x="4" y="11" width="16" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></symbol>
 </svg>
 
 <div id="tip" role="tooltip"></div>
@@ -415,6 +421,7 @@ td .sub{font-size:var(--f-xs);color:var(--ink-3)}
     <p>Tarlana göre münavebe planı · 25 yıllık NASA iklim ve uydu verisiyle</p>
   </div>
   <div class="hdr-ctl">
+    <a class="hdr-link" href="#privacyBand"><svg class="i i--sm" aria-hidden="true"><use href="#i-lock"/></svg><span>Gizlilik</span></a>
     <div class="seg-ctl" role="group" aria-label="Görünüm">
       <button type="button" id="vFarm" aria-pressed="true">Çiftçi</button>
       <button type="button" id="vEng" aria-pressed="false">Mühendis</button>
@@ -450,6 +457,7 @@ td .sub{font-size:var(--f-xs);color:var(--ink-3)}
         <button type="button" class="pbtn" id="geo"><svg class="i i--sm"><use href="#i-locate"/></svg><span>Konumumu bul</span></button>
       </div>
       <div class="parcel" id="parcel" hidden aria-live="polite"></div>
+      <p class="xs muted privacy-note"><svg class="i i--sm" aria-hidden="true"><use href="#i-lock"/></svg><span>Toprak analizin ve fiyatların cihazından çıkmaz. Konum yalnızca iklim, toprak ve uydu verisi almak için veri servislerine gönderilir. <a href="#privacyBand">Ayrıntılar</a></span></p>
       <div class="row eng-only">
         <div class="field"><label for="lat">Enlem</label><input type="number" id="lat" step="0.0001" value="37.5600" class="mono"></div>
         <div class="field"><label for="lon">Boylam</label><input type="number" id="lon" step="0.0001" value="32.7600" class="mono"></div>
@@ -490,10 +498,12 @@ td .sub{font-size:var(--f-xs);color:var(--ink-3)}
         </div>
         <p class="xs muted">Plandaki ürünlerin tohum fiyatı:</p>
         <div class="row" id="seedPrices"></div>
+        <p class="xs muted">Fiyatlar yalnızca bu cihazdaki hesapta kullanılır; hiçbir yere gönderilmez.</p>
       </details>
       <details class="lab" id="labBox">
         <summary>Toprak analiz raporum var</summary>
         <p class="xs muted">İl Tarım ve Orman Müdürlüğü veya akredite laboratuvar raporundaki değerleri gir. Boş bıraktıkların hesaba girmez.</p>
+        <p class="xs muted">Bu değerler yalnızca bu cihazdaki hesapta kullanılır; hiçbir yere gönderilmez.</p>
         <div class="row">
           <div class="field"><label for="ph">pH</label><input type="number" id="ph" step="0.1" min="3" max="11"></div>
           <div class="field"><label for="clay">Kil (%)</label><input type="number" id="clay" step="1" min="0" max="100"></div>
@@ -759,7 +769,37 @@ td .sub{font-size:var(--f-xs);color:var(--ink-3)}
   </div>
 </section>
 
+<section class="band" id="privacyBand" aria-labelledby="privacyTitle">
+  <header><p class="eyebrow">Gizlilik</p><h2 id="privacyTitle">Konumun ve toprak analizin nasıl kullanılır</h2></header>
+  <div class="privacy">
+    <div class="card"><h3>Hesap senin cihazında yapılır</h3><p>ARGIS’in sunucusu, veritabanı ve kullanıcı hesabı yoktur. Plan, reçete ve bütün hesaplar tarayıcında yapılır. Girdiklerini biz görmeyiz ve saklamayız; sayfayı kapatınca silinirler.</p></div>
+    <div class="card"><h3>Toprak analizi ve fiyatlar cihazından çıkmaz</h3><p>pH, kil, kireç ve tuzluluk değerlerin; üre, mazot ve tohum fiyatların; alan, mevcut planın ve kazanç puanların hiçbir yere gönderilmez.</p></div>
+    <div class="card"><h3>Konum yalnızca veri almak için gönderilir</h3><p>“Münavebe planımı çıkar”a bastığında tarlanın koordinatı (yaklaşık 10 m hassasiyetle) aşağıdaki veri servislerine gönderilir; bu servisler o noktanın iklim, toprak ve uydu verisini döndürür. Koordinat bir ad, telefon numarası ya da hesapla birlikte gönderilmez. Haritaya dokunmak tek başına koordinat göndermez.</p></div>
+    <div class="card"><h3>“Konumumu bul”</h3><p>Tarayıcın önce izin ister. Bulunan konum yalnızca enlem ve boylam kutularını doldurmak için kullanılır ve saklanmaz.</p></div>
+  </div>
+  <div class="prose">
+    <h3>Üçüncü taraflara ne gider?</h3>
+    <div class="scroll" tabindex="0" role="region" aria-label="Üçüncü taraf hizmetler tablosu"><table>
+      <thead><tr><th>Hizmet</th><th>Ne gönderilir</th><th>Ne zaman</th></tr></thead>
+      <tbody>
+        <tr><td>NASA POWER, ISRIC SoilGrids, ORNL DAAC (MODIS)</td><td>Tarlanın koordinatı</td><td>“Münavebe planımı çıkar”a bastığında</td></tr>
+        <tr><td>Open-Meteo (ERA5)</td><td>Tarlanın koordinatı</td><td>Veri kontrolleri için, bir plan gösterildiğinde (hazır bölgelerde de)</td></tr>
+        <tr><td>Esri ve NASA GIBS harita katmanları</td><td>Haritada görünen alanın karo adresleri</td><td>Harita gösterilirken</td></tr>
+        <tr><td>Google Fonts, cdnjs (Cloudflare)</td><td>Yazı tipi ve harita kütüphanesi isteği</td><td>Sayfa açılırken</td></tr>
+        <tr><td>Vercel veya GitHub Pages (barındırma)</td><td>Sayfa isteği</td><td>Sayfa açılırken</td></tr>
+      </tbody>
+    </table></div>
+    <p>Her internet isteğinde olduğu gibi bu hizmetler IP adresini ve tarayıcı bilgisini de görür ve kendi gizlilik politikalarına göre kayıt tutabilir. ARGIS bu kayıtları almaz.</p>
+    <h3>Tarayıcıda saklananlar</h3>
+    <p>Yalnızca iki tercih, tarayıcının yerel deposunda: dil (TR / EN) ve görünüm (Çiftçi / Mühendis). Çerez, reklam ya da ziyaretçi analizi yoktur.</p>
+    <h3>Paylaşım ve indirme</h3>
+    <p>“Planı paylaş” koordinatı ve planı içeren bir metin hazırlar; nereye gönderileceğini sen seçersin. CSV dosyası ve yazdırma cihazında oluşturulur. TKGM bağlantısı yalnızca TKGM’nin sitesini açar; koordinatı sen kopyalarsın.</p>
+    <p>Son güncelleme: 15 Kasım 2026. Soru ve öneriler için: <a href="https://github.com/kivanc-orcun-erbay/argis/issues">GitHub</a></p>
+  </div>
+</section>
+
 <footer class="band src">
+  <p><a href="#privacyBand">Gizlilik: konum ve toprak verisi nasıl kullanılır</a></p>
   <p class="farm-only">Yağış, sıcaklık ve toprak nemi NASA POWER'dan, tarla yeşilliği NASA MODIS uydusundan, toprak bilgisi SoilGrids'ten alınır. Bu bir öneridir; son karar için ilçe tarım müdürlüğüne veya ziraat mühendisine danışın.</p>
   <p class="eng-only">Kaynaklar: <a href="https://power.larc.nasa.gov/">NASA POWER</a> · <a href="https://modis.ornl.gov/data/modis_webservice.html">ORNL DAAC MODIS</a> · <a href="https://www.earthdata.nasa.gov/engage/open-data-services-software/earthdata-developer-portal/gibs-api">NASA GIBS</a> · <a href="https://www.isric.org/explore/soilgrids">SoilGrids 2.0</a> · FAO EcoCrop (genel referans; ürün eşikleri tek tek doğrulanmadı). Karar desteğidir; son karar için yerel ziraat mühendisine danışın.</p>
 </footer>
@@ -1669,6 +1709,42 @@ const I18N = {
   "NASA verisi ve karara etkisi tablosu": "Table of NASA data and its effect on the decision",
   "Ürün eşikleri tablosu": "Crop threshold table",
   "Dil": "Language",
+  "Gizlilik": "Privacy",
+  "Toprak analizin ve fiyatların cihazından çıkmaz. Konum yalnızca iklim, toprak ve uydu verisi almak için veri servislerine gönderilir.": "Your soil test and prices never leave your device. The location is sent to data services only to get climate, soil and satellite data.",
+  "Ayrıntılar": "Details",
+  "Bu değerler yalnızca bu cihazdaki hesapta kullanılır; hiçbir yere gönderilmez.": "These values are used only in the calculation on this device; they are not sent anywhere.",
+  "Fiyatlar yalnızca bu cihazdaki hesapta kullanılır; hiçbir yere gönderilmez.": "Prices are used only in the calculation on this device; they are not sent anywhere.",
+  "Konumun ve toprak analizin nasıl kullanılır": "How your location and soil test are used",
+  "Hesap senin cihazında yapılır": "The calculation runs on your device",
+  "ARGIS’in sunucusu, veritabanı ve kullanıcı hesabı yoktur. Plan, reçete ve bütün hesaplar tarayıcında yapılır. Girdiklerini biz görmeyiz ve saklamayız; sayfayı kapatınca silinirler.": "ARGIS has no server, database or user accounts. The plan, the recipe and every calculation run in your browser. We do not see or keep what you enter; it is gone when you close the page.",
+  "Toprak analizi ve fiyatlar cihazından çıkmaz": "Soil test and prices stay on your device",
+  "pH, kil, kireç ve tuzluluk değerlerin; üre, mazot ve tohum fiyatların; alan, mevcut planın ve kazanç puanların hiçbir yere gönderilmez.": "Your pH, clay, lime and salinity values; urea, diesel and seed prices; area, current plan and earnings scores are not sent anywhere.",
+  "Konum yalnızca veri almak için gönderilir": "The location is sent only to fetch data",
+  "“Münavebe planımı çıkar”a bastığında tarlanın koordinatı (yaklaşık 10 m hassasiyetle) aşağıdaki veri servislerine gönderilir; bu servisler o noktanın iklim, toprak ve uydu verisini döndürür. Koordinat bir ad, telefon numarası ya da hesapla birlikte gönderilmez. Haritaya dokunmak tek başına koordinat göndermez.": "When you press “Make my rotation plan”, the field’s coordinates (to about 10 m) are sent to the data services below, which return the climate, soil and satellite data for that point. The coordinates are not sent with a name, phone number or account. Tapping the map alone sends no coordinates.",
+  "“Konumumu bul”": "“Find my location”",
+  "Tarayıcın önce izin ister. Bulunan konum yalnızca enlem ve boylam kutularını doldurmak için kullanılır ve saklanmaz.": "Your browser asks for permission first. The position found only fills in the latitude and longitude boxes and is not kept.",
+  "Üçüncü taraflara ne gider?": "What goes to third parties?",
+  "Üçüncü taraf hizmetler tablosu": "Third-party services table",
+  "Hizmet": "Service",
+  "Ne gönderilir": "What is sent",
+  "Ne zaman": "When",
+  "Tarlanın koordinatı": "The field’s coordinates",
+  "“Münavebe planımı çıkar”a bastığında": "When you press “Make my rotation plan”",
+  "Veri kontrolleri için, bir plan gösterildiğinde (hazır bölgelerde de)": "For the data checks, whenever a plan is shown (preset regions too)",
+  "Esri ve NASA GIBS harita katmanları": "Esri and NASA GIBS map layers",
+  "Haritada görünen alanın karo adresleri": "Tile addresses of the area shown on the map",
+  "Harita gösterilirken": "While the map is shown",
+  "Yazı tipi ve harita kütüphanesi isteği": "Requests for fonts and the map library",
+  "Sayfa açılırken": "When the page opens",
+  "Vercel veya GitHub Pages (barındırma)": "Vercel or GitHub Pages (hosting)",
+  "Sayfa isteği": "The page request",
+  "Her internet isteğinde olduğu gibi bu hizmetler IP adresini ve tarayıcı bilgisini de görür ve kendi gizlilik politikalarına göre kayıt tutabilir. ARGIS bu kayıtları almaz.": "As with any web request, these services also see your IP address and browser details and may keep logs under their own privacy policies. ARGIS does not receive those logs.",
+  "Tarayıcıda saklananlar": "What your browser keeps",
+  "Yalnızca iki tercih, tarayıcının yerel deposunda: dil (TR / EN) ve görünüm (Çiftçi / Mühendis). Çerez, reklam ya da ziyaretçi analizi yoktur.": "Only two preferences, in the browser’s local storage: language (TR / EN) and view (Farmer / Engineer). No cookies, ads or visitor analytics.",
+  "Paylaşım ve indirme": "Sharing and downloads",
+  "“Planı paylaş” koordinatı ve planı içeren bir metin hazırlar; nereye gönderileceğini sen seçersin. CSV dosyası ve yazdırma cihazında oluşturulur. TKGM bağlantısı yalnızca TKGM’nin sitesini açar; koordinatı sen kopyalarsın.": "“Share plan” prepares a text with the coordinates and the plan; you choose where it goes. The CSV file and printing are made on your device. The TKGM link only opens TKGM’s site; you copy the coordinates yourself.",
+  "Son güncelleme: 15 Kasım 2026. Soru ve öneriler için:": "Last updated: 15 November 2026. Questions and suggestions:",
+  "Gizlilik: konum ve toprak verisi nasıl kullanılır": "Privacy: how location and soil data are used",
   "Veri kontrolleri": "Data checks",
   "Girdi fiyatlarım (reçete)": "My input prices (recipe)",
   "Fiyatları gir; ARGIS plandaki her yıl için tohum, gübre ve mazot miktarını ve maliyetini hesaplar. Gübre fiyatı yukarıdaki “Üre fiyatı” kutusundan alınır.": "Enter prices; ARGIS works out the seed, fertilizer and diesel amounts and their cost for each year of the plan. The fertilizer price comes from the “Urea price” box above.",
