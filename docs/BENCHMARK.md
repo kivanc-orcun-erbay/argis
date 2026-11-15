@@ -64,7 +64,7 @@ Canlı sitede tek bir “Münavebe planımı çıkar” tıklaması: NASA POWER 
 
 ## Yük (eşzamanlı kullanıcı)
 
-Ayrı bir yük testi yapılmadı, çünkü FieldShift'in sunucusu yoktur: sayfa GitHub Pages'in CDN'inden gelen tek bir statik dosyadır ve her kullanıcının tarayıcısı NASA / ISRIC / ORNL servislerine doğrudan bağlanır. Kullanıcı sayısı arttıkça yük bu kurumların servislerine dağılır. Onlara toplu istek göndermek hem uygunsuz hem de ölçmek istediğimiz şey değildir. Hazır dört bölge hiçbir dış servise gitmeden, sayfaya gömülü veriyle çalışır; jüri gösterimi servis yükünden etkilenmez.
+Ayrı bir yük testi yapılmadı, çünkü Argis'in sunucusu yoktur: sayfa GitHub Pages'in CDN'inden gelen tek bir statik dosyadır ve her kullanıcının tarayıcısı NASA / ISRIC / ORNL servislerine doğrudan bağlanır. Kullanıcı sayısı arttıkça yük bu kurumların servislerine dağılır. Onlara toplu istek göndermek hem uygunsuz hem de ölçmek istediğimiz şey değildir. Hazır dört bölge hiçbir dış servise gitmeden, sayfaya gömülü veriyle çalışır; jüri gösterimi servis yükünden etkilenmez.
 
 ## İyileştirmelerden sonra (`89e317c`)
 

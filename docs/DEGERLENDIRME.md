@@ -1,8 +1,8 @@
-# FieldShift: gösterim ve doğrulama rehberi
+# Argis: gösterim ve doğrulama rehberi
 
 ## Jüriye anlatım (yaklaşık 90 saniye)
 
-“Çiftçinin sorusu şu: Değişen iklimde, geçen yıl ektiğim üründen sonra hangi ürünü seçmeliyim? FieldShift, konumun iklim geçmişini ve çiftçinin su, toprak ve pazar önceliklerini açıklanabilir bir münavebe planına dönüştüren araştırma prototipidir.”
+“Çiftçinin sorusu şu: Değişen iklimde, geçen yıl ektiğim üründen sonra hangi ürünü seçmeliyim? Argis, konumun iklim geçmişini ve çiftçinin su, toprak ve pazar önceliklerini açıklanabilir bir münavebe planına dönüştüren araştırma prototipidir.”
 
 1. Konumu ve geçen yılın ürününü seçin. Canlı veri alınabiliyorsa kaynak durumlarını gösterin; sentetik örneğe geçerseniz bunu açıkça söyleyin.
 2. Planın altında ürün sırasının nedenlerini gösterin. POWER sıcaklık ve yağışının uygunluğu; MODIS eğiliminin ek puanları nasıl etkilediğini açıklayın.
@@ -64,7 +64,7 @@ Doğrulama: Harran'daki 2007–2009 kurak yılları, Güneydoğu Anadolu ve Kuze
 - Tarla / bölge, alan, toprak analizi tarihi ve kaynağı: doldurulacak.
 - Önceki ürünler, ekim / hasat tarihleri, sulama kapasitesi: doldurulacak.
 - Veri çekim tarihi, POWER dönemleri, MODIS kalite kontrolü: doldurulacak.
-- Çiftçinin mevcut planı ve FieldShift önerisi: doldurulacak.
+- Çiftçinin mevcut planı ve Argis önerisi: doldurulacak.
 - Modelin öngördüğü su / gübre farkı ve kullanılan varsayımlar: doldurulacak.
 - Uzmanın adı, değerlendirme tarihi, kabul ettiği ve değiştirdiği öneriler: doldurulacak.
 - Sezon sonunda ölçülen su, gübre, verim, maliyet ve gelir: doldurulacak.

@@ -1,7 +1,7 @@
 {
-  "name": "fieldshift",
+  "name": "argis",
   "private": true,
-  "description": "FieldShift: NASA climate data to crop rotation plans (single static page)",
+  "description": "Argis: NASA climate data to crop rotation plans (single static page)",
   "scripts": {
     "test": "node tests/model.cjs && node --test tests/unit.cjs && node tests/regions.cjs",
     "test:browser": "playwright test",

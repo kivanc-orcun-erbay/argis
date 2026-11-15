@@ -33,7 +33,7 @@ def get(url, tries=8, timeout=90):
     """GET JSON with exponential backoff (MODIS is often slow; home connections drop)."""
     for i in range(tries):
         try:
-            req = urllib.request.Request(url, headers={"Accept": "application/json", "User-Agent": "fieldshift-snapshot"})
+            req = urllib.request.Request(url, headers={"Accept": "application/json", "User-Agent": "argis-snapshot"})
             with urllib.request.urlopen(req, timeout=timeout) as r:
                 return json.load(r)
         except Exception as e:

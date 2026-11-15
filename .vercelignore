@@ -1,4 +1,4 @@
-# FieldShift is one static page: upload only what the site serves, so Vercel does not try to build it.
+# Argis is one static page: upload only what the site serves, so Vercel does not try to build it.
 node_modules
 tests
 test-results
