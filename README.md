@@ -1,4 +1,4 @@
-# Argis
+# ARGIS
 
 **Canlı:** https://argis-mu.vercel.app/ (Vercel) · https://kivanc-orcun-erbay.github.io/argis/ (GitHub Pages)
 
