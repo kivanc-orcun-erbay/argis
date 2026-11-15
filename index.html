@@ -1934,7 +1934,9 @@ const setText = (id, fn) => { textFns[id] = fn; $(id).textContent = fn(); };
 // ---------- Fetch ----------
 async function fetchT(url, opts = {}, ms = 25000) {
   const ac = new AbortController(), t = setTimeout(() => ac.abort(), ms);
-  try { return await fetch(url, { ...opts, signal: ac.signal }); }
+  const { signal, ...rest } = opts; // an outside signal (the MODIS time limit) can cancel the request too
+  if (signal) { if (signal.aborted) ac.abort(); else signal.addEventListener('abort', () => ac.abort(), { once: true }); }
+  try { return await fetch(url, { ...rest, signal: ac.signal }); }
   catch (e) { throw e.name === 'AbortError' ? new Error(T('zaman aşımı', 'timed out')) : e; }
   finally { clearTimeout(t); }
 }
@@ -1960,9 +1962,9 @@ async function getSoil(lat, lon) {
   j.properties.layers.forEach(L => { const df = L.unit_measure.d_factor || 1; const vs = L.depths.map(d => d.values.mean).filter(v => v != null); o[L.name] = vs.length ? FS.mean(vs) / df : null; });
   return { ph: o.phh2o, clay: o.clay, soc: o.soc };
 }
-async function getNdvi(lat, lon) {
+async function getNdvi(lat, lon, signal) {
   const base = 'https://modis.ornl.gov/rst/api/v1/MOD13Q1';
-  const h = { headers: { Accept: 'application/json' } };
+  const h = { headers: { Accept: 'application/json' }, signal };
   const dr = await fetchT(`${base}/dates?latitude=${lat}&longitude=${lon}`, h, 90000); if (!dr.ok) throw new Error('MODIS ' + dr.status); const dj = await dr.json();
   const dates = dj.dates.slice(-23 * 5);
   const chunks = []; for (let i = 0; i < dates.length; i += 10) chunks.push(dates.slice(i, i + 10));
@@ -2012,13 +2014,18 @@ $('go').addEventListener('click', async () => {
 // loading in the background and the plan is recomputed when it arrives (the status says what is
 // pending). fetchGen makes answers from an older lookup (or after a preset click) ignored.
 const SOIL_WAIT = 5000;
+// MODIS gets MODIS_WAIT in all; if it has not answered by then its requests are cancelled and the
+// source shows red at once, and the plan is made without satellite greenness.
+const MODIS_WAIT = 2000;
 let fetchGen = 0;
 async function fetchAll(lat, lon) {
   const gen = ++fetchGen, t0 = performance.now();
   $('srcStatus').hidden = false;
   status(() => T('NASA POWER ve SoilGrids okunuyor; birkaç saniye sürer.', 'Reading NASA POWER and SoilGrids; this takes a few seconds.'));
   const settle = p => p.then(value => ({ ok: true, value }), reason => ({ ok: false, reason }));
-  const ndP = track('modis', getNdvi(lat, lon));
+  const mc = new AbortController(), mt = setTimeout(() => mc.abort(), MODIS_WAIT);
+  const ndP = track('modis', getNdvi(lat, lon, mc.signal).finally(() => clearTimeout(mt)));
+  ndP.catch(() => {}); // handled below once the plan is drawn; this keeps an early failure from being reported as unhandled
   const soilP = settle(track('soil', getSoil(lat, lon)));
   const pw = await settle(track('power', getPower(lat, lon)));
   if (gen !== fetchGen) return;
@@ -2047,7 +2054,7 @@ async function fetchAll(lat, lon) {
     S.ndvi = nd; S.live.ndvi = nd.some(p => p.v != null) ? 'ok' : 'none';
     liveStatus(); compute(false);
     if (S.live.ndvi === 'ok') toast(T('MODIS yeşillik verisi geldi; plan güncellendi', 'MODIS greenness data arrived; plan updated'), 'check');
-  }, () => { if (gen !== fetchGen) return; S.live.ndvi = 'fail'; liveStatus(); renderChecks(); });
+  }, () => { if (gen !== fetchGen) return; S.live.ndvi = 'fail'; S.live.ndviSlow = mc.signal.aborted; liveStatus(); renderChecks(); });
 }
 // res: null = still loading, {ok, value|reason} = answered.
 function applySoilAnswer(res) {
@@ -2072,6 +2079,7 @@ function liveStatus() {
     const wait = [L.soil === 'pending' && T('SoilGrids toprak', 'SoilGrids soil'), L.ndvi === 'pending' && T('MODIS yeşillik', 'MODIS greenness')].filter(Boolean);
     let msg = miss.length ? T(`Plan hazır; ${miss.join(and)} verisi olmadan hesaplandı.`, `Plan ready; calculated without ${miss.join(and)} data.`) : T('Plan hazır; güncel NASA verisiyle.', 'Plan ready, from current NASA data.');
     if (wait.length) msg += T(` ${wait.join(and)} verisi arka planda yükleniyor; gelirse plan güncellenir.`, ` ${wait.join(and)} data is still loading in the background; the plan updates if it arrives.`);
+    if (L.ndviSlow) msg += T(` MODIS ${MODIS_WAIT / 1000} saniye içinde yanıt vermedi.`, ` MODIS did not answer within ${MODIS_WAIT / 1000} seconds.`);
     if (dropped) msg += T(` ${dropped} bulutlu/karlı MODIS tarihi ayıklandı.`, ` ${dropped} cloudy/snowy MODIS dates removed.`);
     if (!L.daily) msg += T(' Günlük sıcaklık alınamadı; aylık uç değerler kullanıldı, kavrulma ve don riski abartılı olabilir.', ' Daily temperatures could not be fetched; monthly extremes were used, so heat and frost risk may be overstated.');
     return msg;
@@ -2709,6 +2717,7 @@ function renderChecks() {
   if (S.demo) add('modis', 'nil', sat, T('Sentetik örnek.', 'Synthetic example.'));
   else if (L && L.ndvi === 'pending') add('modis', 'nil', sat, T('MODIS verisi yükleniyor…', 'Loading MODIS data…'), T('Bekleniyor', 'Pending'));
   else if (nd.years.length >= 3) add('modis', 'ok', sat, T(`${nd.years.length} yıl, ${pts} tarih${dropped ? `; ${dropped} bulutlu/karlı tarih ayıklandı` : ''}.`, `${nd.years.length} years, ${pts} dates${dropped ? `; ${dropped} cloudy/snowy dates removed` : ''}.`));
+  else if (L && L.ndviSlow) add('modis', 'risk', sat, T(`MODIS ${MODIS_WAIT / 1000} saniye içinde yanıt vermedi; yeşillik eğilimi plana girmedi.`, `MODIS did not answer within ${MODIS_WAIT / 1000} seconds; the greenness trend is not in the plan.`));
   else add('modis', 'risk', sat, nd.years.length ? T(`Yalnızca ${nd.years.length} yıl var; yeşillik eğilimi zayıf dayanaklı.`, `Only ${nd.years.length} years; the greenness trend rests on little data.`) : T('Uydu verisi yok; yeşillik eğilimi plana girmedi.', 'No satellite data; the greenness trend is not in the plan.'));
   const soil = T('Toprak verisi', 'Soil data'), st = $('soilType').value;
   if (S.demo && st === 'auto') add('soil', 'nil', soil, T('Sentetik örnek.', 'Synthetic example.'));

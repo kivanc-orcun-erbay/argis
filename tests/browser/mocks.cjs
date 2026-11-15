@@ -65,7 +65,8 @@ async function mockServices(page, opts = {}) {
     const m = mode(k);
     if (m === 'fail') return json(route, { error: 'unavailable' }, 503);
     if (typeof m === 'number') await new Promise(r => setTimeout(r, m));
-    return json(route, body);
+    // A slow answer may come after the page cancelled the request (the MODIS time limit): ignore that.
+    return json(route, body).catch(() => {});
   };
   const md = modis(region);
 

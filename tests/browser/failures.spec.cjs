@@ -1,6 +1,6 @@
 // "Münavebe planımı çıkar" against mocked services: success, each service failing, and slow answers.
 const { test, expect } = require('@playwright/test');
-const { mockServices } = require('./mocks.cjs');
+const { mockServices, watchErrors } = require('./mocks.cjs');
 
 const status = page => page.locator('#status');
 const open = async (page, opts) => {
@@ -87,28 +87,37 @@ test('SoilGrids down: plan still made, soil marked missing', async ({ page }) =>
   await expect(page.locator('#srcStatus li[data-src="soil"]')).toHaveAttribute('data-state', 'err');
 });
 
-test('slow MODIS: plan appears from POWER + soil, then updates when MODIS arrives', async ({ page }) => {
+test('MODIS slower than 2 s: shown red at 2 s, plan made without greenness, the late answer ignored', async ({ page }) => {
+  const errors = watchErrors(page);
   await open(page, { modis: 3000 });
+  const t = Date.now();
   await goAt(page);
-  // Plan is ready and the button free while MODIS is still loading.
   await expect(page.locator('#go')).toHaveAttribute('aria-busy', 'false');
-  await expect(page.locator('#srcStatus li[data-src="modis"]')).toHaveAttribute('data-state', 'loading');
-  await expect(status(page)).toContainText('arka planda yükleniyor');
-  await expect(page.locator('#evidenceNote')).toContainText('Güncel NASA verisi');
-  // MODIS arrives: status settles, toast confirms the update.
-  await expect(page.locator('#srcStatus li[data-src="modis"]')).toHaveAttribute('data-state', 'ok', { timeout: 15_000 });
+  await expect(page.locator('#srcStatus li[data-src="modis"]')).toHaveAttribute('data-state', 'err', { timeout: 2500 });
+  expect(Date.now() - t).toBeLessThan(2800);
+  await expect(status(page)).toContainText('uydu yeşilliği verisi olmadan');
+  await expect(status(page)).toContainText('MODIS 2 saniye içinde yanıt vermedi');
+  await expect(page.locator('#checks li[data-chk="modis"]')).toContainText('2 saniye içinde yanıt vermedi');
+  await page.waitForTimeout(1500); // past the mock's 3 s: the cancelled request must not come back
+  await expect(page.locator('#srcStatus li[data-src="modis"]')).toHaveAttribute('data-state', 'err');
+  await expect(page.locator('#toast')).not.toContainText('MODIS yeşillik verisi geldi');
+  expect(errors.filter(e => !/modis|failed to load/i.test(e))).toEqual([]);
+});
+
+test('MODIS within 2 s: used, shown green, plan updated', async ({ page }) => {
+  await open(page, { modis: 400 }); // per request: the dates list, then the values, ~0.8 s in all
+  await goAt(page);
+  await expect(page.locator('#srcStatus li[data-src="modis"]')).toHaveAttribute('data-state', 'ok', { timeout: 3000 });
   await expect(status(page)).toContainText('Plan hazır; güncel NASA verisiyle.');
-  await expect(status(page)).not.toContainText('arka planda');
-  await expect(page.locator('#toast')).toContainText('MODIS yeşillik verisi geldi');
 });
 
 test('a late MODIS answer does not overwrite a preset chosen in the meantime', async ({ page }) => {
-  await open(page, { modis: 2500 });
+  await open(page, { modis: 1500 });
   await goAt(page);
   await expect(page.locator('#go')).toHaveAttribute('aria-busy', 'false');
   await page.locator('.pbtn[data-snap="trakya"]').click();
   const presetStatus = await status(page).innerText();
-  await page.waitForTimeout(3500); // MODIS for the old lookup arrives during this wait
+  await page.waitForTimeout(2500); // MODIS for the old lookup arrives (inside its 2 s limit) during this wait
   await expect(status(page)).toHaveText(presetStatus);
   await expect(page.locator('#evidenceNote')).toContainText('kaydedilmiş gerçek NASA verisi');
 });
