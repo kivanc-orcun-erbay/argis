@@ -4,6 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>ARGIS — NASA iklim verisiyle münavebe planı</title>
+<link rel="icon" href="argis-logo.svg" type="image/svg+xml">
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -24,6 +25,8 @@
   --ink:#13212a; --ink-2:#36454d; --ink-3:#56646a;   /* ink-3 on bg = 5.6:1 */
   /* accent */
   --accent:#2e7529; --accent-hover:#25621f; --accent-ink:#ffffff; --accent-soft:#e2eedd;
+  /* logo (argis-wordmark.svg) */
+  --brand-green:#2e7529; --brand-gold:#b6810b;
   /* data series */
   --rain:#2a6d8c; --heat:#a04e16;
   /* status (text colours meet 4.5:1 on their -bg) */
@@ -53,6 +56,7 @@
     --line:#26404b; --line-strong:#38535f;
     --ink:#e6eeea; --ink-2:#c3d1cf; --ink-3:#9aadae;
     --accent:#6cc463; --accent-hover:#82d27a; --accent-ink:#0a2508; --accent-soft:#1b361a;
+    --brand-green:#6cc463; --brand-gold:#e0a93a;
     --rain:#5aa8cb; --heat:#e38b4c;
     --ok:#86d47e; --ok-bg:#1b361a; --warn:#f1b65c; --warn-bg:#382a10; --bad:#f39185; --bad-bg:#3b1b18;
   }
@@ -84,6 +88,8 @@ body.eng .farm-only{display:none!important}
 /* ---------- header ---------- */
 .hdr{display:flex;align-items:center;gap:var(--s4);flex-wrap:wrap;padding:var(--s4) clamp(16px,3vw,40px);border-bottom:1px solid var(--line);background:var(--surface)}
 .hdr p{color:var(--ink-3);font-size:var(--f-sm)}
+.brand{line-height:0;margin-bottom:var(--s1)}
+.wordmark{display:block;height:44px;width:auto;margin-left:-6px}  /* the A's stroke starts 13/198 in; pull it to the text edge */
 .hdr-ctl{margin-left:auto;display:flex;flex-wrap:wrap;gap:var(--s2)}
 .seg-ctl{display:inline-flex;padding:var(--pad-tight);gap:2px;background:var(--surface-2);border-radius:var(--r-md)}
 .seg-ctl button{min-height:40px;padding:0 var(--s4);border:0;border-radius:var(--r-in-md);background:transparent;color:var(--ink-2);font:600 var(--f-sm) var(--font);cursor:pointer;transition:background var(--t-fast),color var(--t-fast)}
@@ -377,7 +383,23 @@ td .sub{font-size:var(--f-xs);color:var(--ink-3)}
 
 <header class="hdr">
   <div>
-    <h1>ARGIS</h1>
+    <h1 class="brand"><svg class="wordmark" viewBox="0 0 198 64" role="img" aria-label="ARGIS"><!-- argis-wordmark.svg, colours from the page tokens so dark mode works -->
+      <g fill="none" stroke="var(--brand-green)" stroke-linecap="round" stroke-linejoin="round">
+        <g stroke-width="7"><path d="M 13,53 L 32,11 L 51,53"/><path d="M 21,36 H 31 C 36,36 39,35 41.3,31.6"/></g>
+        <g stroke-width="3.8">
+          <path d="M 69,44 L 78.5,20 L 88,44 M 72,37 H 85"/>
+          <path d="M 98,44 V 20 H 106.5 C 111.5,20 114,22.6 114,26.5 C 114,30.4 111.5,33 106.5,33 H 98 M 106,33 L 115,44"/>
+          <path d="M 143,23 C 141.1,20.8 138.5,19.7 135.5,19.7 C 128.8,19.7 124.5,24.7 124.5,32 C 124.5,39.3 128.8,44.3 135.5,44.3 C 139,44.3 141.9,43 144,41 V 33 H 136.5"/>
+          <path d="M 181,23 C 178.9,20.9 176.2,19.7 173.1,19.7 C 168.9,19.7 166.1,22 166.1,25.6 C 166.1,29 168.9,30.5 173.8,31.9 C 179.3,33.5 182,35 182,38.6 C 182,42.2 178.7,44.3 174.1,44.3 C 170.5,44.3 167.4,43 165,40.6"/>
+        </g>
+      </g>
+      <g fill="var(--brand-gold)">
+        <path d="M 155,24 V 44" fill="none" stroke="var(--brand-gold)" stroke-width="3" stroke-linecap="round"/>
+        <path d="M 155,17.5 C 158.2,20.6 158.2,23.5 155,26 C 151.8,23.5 151.8,20.6 155,17.5 Z"/>
+        <path d="M 155,31.5 C 151,30.6 148.6,27.6 148.9,23.6 C 152.7,24.5 155,27.2 155,31.5 Z M 155,31.5 C 159,30.6 161.4,27.6 161.1,23.6 C 157.3,24.5 155,27.2 155,31.5 Z"/>
+        <path d="M 155,37.4 C 151,36.5 148.6,33.5 148.9,29.5 C 152.7,30.4 155,33.1 155,37.4 Z M 155,37.4 C 159,36.5 161.4,33.5 161.1,29.5 C 157.3,30.4 155,33.1 155,37.4 Z"/>
+      </g>
+    </svg></h1>
     <p>Tarlana göre münavebe planı · 25 yıllık NASA iklim ve uydu verisiyle</p>
   </div>
   <div class="hdr-ctl">
