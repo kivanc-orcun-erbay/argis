@@ -1,6 +1,6 @@
 # Argis
 
-**Canlı:** https://fieldshift-mu.vercel.app/ (Vercel) · https://kivanc-orcun-erbay.github.io/fieldshift/ (GitHub Pages)
+**Canlı:** https://argis-mu.vercel.app/ (Vercel) · https://kivanc-orcun-erbay.github.io/argis/ (GitHub Pages)
 
 Vercel'e yeniden yüklemek için: `npx vercel@65.8.0 deploy --prod` (`vercel.json` ve `.vercelignore` yalnızca statik sayfayı yükler).
 

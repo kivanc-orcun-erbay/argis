@@ -1,6 +1,6 @@
 # Performans ölçümü — 14 Kasım 2026
 
-İlk ölçüm `16db48f` sürümünde yapıldı; aşağıdaki iyileştirmelerden sonra `89e317c` sürümünde tekrarlandı (bkz. “İyileştirmelerden sonra”). İlk ölçüm sürümü: `16db48f` (canlı site, https://kivanc-orcun-erbay.github.io/fieldshift/). Makine: Apple M4 Pro, Chromium 156, Node 25. Telefon profili: CPU 4× yavaş, "yavaş 4G" (1,6 Mbit/s indirme, 150 ms gecikme), 375 px ekran.
+İlk ölçüm `16db48f` sürümünde yapıldı; aşağıdaki iyileştirmelerden sonra `89e317c` sürümünde tekrarlandı (bkz. “İyileştirmelerden sonra”). İlk ölçüm sürümü: `16db48f` (canlı site, https://kivanc-orcun-erbay.github.io/argis/). Makine: Apple M4 Pro, Chromium 156, Node 25. Telefon profili: CPU 4× yavaş, "yavaş 4G" (1,6 Mbit/s indirme, 150 ms gecikme), 375 px ekran.
 
 Yeniden çalıştırmak için:
 

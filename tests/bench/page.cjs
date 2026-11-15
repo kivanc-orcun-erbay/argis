@@ -5,7 +5,7 @@
 //   phone:   4x CPU slowdown + "slow 4G" (1.6 Mbit/s down, 750 kbit/s up, 150 ms RTT), 375x812 viewport
 const { chromium } = require('@playwright/test');
 
-const URL = process.argv[2] || 'https://kivanc-orcun-erbay.github.io/fieldshift/';
+const URL = process.argv[2] || 'https://kivanc-orcun-erbay.github.io/argis/';
 const RUNS = +(process.argv[3] || 7);
 const PROFILES = {
   desktop: { viewport: { width: 1440, height: 900 }, cpu: 1, net: null },
@@ -38,7 +38,7 @@ async function oneLoad(browser, prof) {
   const m = await page.evaluate(() => {
     const n = performance.getEntriesByType('navigation')[0], res = performance.getEntriesByType('resource');
     const kb = x => Math.round(x / 1024);
-    const pageBytes = n.transferSize, own = res.filter(r => r.name.includes('/fieldshift/')).reduce((s, r) => s + r.transferSize, 0);
+    const pageBytes = n.transferSize, own = res.filter(r => r.name.includes('/argis/')).reduce((s, r) => s + r.transferSize, 0);
     const all = pageBytes + res.reduce((s, r) => s + r.transferSize, 0);
     return { ttfb: n.responseStart, dcl: n.domContentLoadedEventEnd, load: n.loadEventEnd, lcp: window.__lcp, htmlKB: kb(pageBytes), ownKB: kb(pageBytes + own), allKB: kb(all), requests: res.length + 1 };
   });
