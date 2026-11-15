@@ -313,6 +313,11 @@ td .sub{font-size:var(--f-xs);color:var(--ink-3)}
 #toast button:focus-visible{outline:2px solid var(--bg);outline-offset:2px}
 .panel-links{display:flex;justify-content:center;flex-wrap:wrap;gap:var(--s2) var(--s4)}
 .evidence{font-size:var(--f-sm);color:var(--ink-3)}
+.checklink{margin-top:var(--s2)}
+.checks{list-style:none;padding:0;margin:0;display:grid;grid-template-columns:repeat(auto-fill,minmax(min(100%,300px),1fr));gap:var(--s3)}
+.checks li{display:grid;grid-template-columns:1fr auto;gap:var(--s2) var(--s3);align-items:start;padding:var(--s3) var(--s4);background:var(--surface);border:1px solid var(--line);border-radius:var(--r-md)}
+.checks li .sm{grid-column:1/-1;color:var(--ink-2)}
+.checks li[data-state=risk],.checks li[data-state=no]{border-color:var(--warn)}
 .evidence summary{display:block;padding:8px 0;cursor:pointer;list-style:none;font-weight:600;color:var(--ink-2);line-height:1.45}
 .evidence summary .i{vertical-align:-3px;margin-right:6px}
 .evidence summary .more{margin-left:8px;white-space:nowrap}
@@ -556,6 +561,7 @@ td .sub{font-size:var(--f-xs);color:var(--ink-3)}
     <p class="sm" id="constraintResult" role="status" hidden></p>
     <p class="sm" id="dryResult" role="status" hidden></p>
     <details class="evidence" id="evidenceBox"><summary><svg class="i i--sm" aria-hidden="true"><use href="#i-alert"/></svg><span id="evidenceSum"></span><span class="more">Ayrıntı</span></summary><p id="evidenceNote" aria-live="polite"></p></details>
+    <p class="sm checklink"><a href="#checkBand" id="checkLink"></a></p>
   </header>
   <div class="hero-grid">
     <div>
@@ -659,6 +665,12 @@ td .sub{font-size:var(--f-xs);color:var(--ink-3)}
   <p class="foot" id="soilNote"></p>
   <p class="foot" id="labNote"></p>
   <div class="actions"><button class="btn" id="csv"><svg class="i i--sm"><use href="#i-download"/></svg>25 yıllık veriyi CSV indir</button></div>
+</section>
+
+<section class="band" id="checkBand" hidden>
+  <header><p class="eyebrow">Veri kontrolleri</p><h2 id="checkTitle"></h2></header>
+  <ul class="checks" id="checks" aria-live="polite"></ul>
+  <p class="foot">İkinci kaynak: ERA5 yeniden analizi (Open-Meteo arşivi, ~25 km ızgara). NASA POWER ~50 km ızgaradır; iki kaynak arasında küçük farklar olağandır. Kontroller her hesapta yeniden yapılır.</p>
 </section>
 
 </div>
@@ -1315,7 +1327,76 @@ var FS = (function () {
     return out.sort((a, b) => a.d < b.d ? -1 : 1);
   }
 
-  return { CROPS: CROPS, NADAS: NADAS, SALT: SALT, LIME: LIME, mannKendall: mannKendall, spi: spi, patterns: patterns, waterYearRain: waterYearRain, normCdf: normCdf, normInv: normInv, gammaP: gammaP, applyDailyMeans: applyDailyMeans, ndviQA: ndviQA, trap: trap, ramp: ramp, seasonStats: seasonStats, POWER_PARAMS: POWER_PARAMS, MD: MD, parsePower: parsePower, climatology: climatology, shiftClim: shiftClim, annual: annual, suit: suit, plan: plan, parseMonth: parseMonth, scheduleRotation: scheduleRotation, checkRotation: checkRotation, findSingleChange: findSingleChange, driestCompleteYear: driestCompleteYear, LIMTXT: LIMTXT, LIMFARM: LIMFARM, GROUP: GROUP, FAMTR: FAMTR, LIMTXT_EN: LIMTXT_EN, LIMFARM_EN: LIMFARM_EN, GROUP_EN: GROUP_EN, FAMEN: FAMEN, setLang: setLang, ndviSummary: ndviSummary, synthPower: synthPower, mean: mean, slope: slope };
+  // ---------- Data checks (the "Veri kontrolleri" panel) ----------
+  // Physical limits for POWER monthly values (°C, mm/day, 0-1, MJ/m²/day).
+  var LIMITS = { T2M: [-45, 45], T2M_MAX: [-40, 55], T2M_MIN: [-60, 40], PRECTOTCORR: [0, 60], GWETROOT: [0, 1], GWETTOP: [0, 1], ALLSKY_SFC_SW_DWN: [0, 40] };
+  function sd(a) { var m = mean(a); return a.length > 1 ? Math.sqrt(a.reduce(function (s, v) { return s + (v - m) * (v - m); }, 0) / (a.length - 1)) : 0; }
+  function corr(a, b) {
+    if (a.length < 3) return null;
+    var ma = mean(a), mb = mean(b), x = 0, ya = 0, yb = 0;
+    for (var i = 0; i < a.length; i++) { x += (a[i] - ma) * (b[i] - mb); ya += (a[i] - ma) * (a[i] - ma); yb += (b[i] - mb) * (b[i] - mb); }
+    return ya && yb ? x / Math.sqrt(ya * yb) : null;
+  }
+  // d: parsePower output. Missing values, values outside physical limits, broken min <= mean <= max
+  // order, and jumps: a month far from the same month in the other years (leave-one-out, so one
+  // outlier cannot hide itself by inflating the spread). 6 SD: real record months stay below it
+  // (Konya, June 2024 heat: 5.2 SD), while unit or decoding errors land far beyond it.
+  function dataChecks(d) {
+    var ys = d._years, total = 0, missing = 0, bad = [], order = 0, tJumps = [], rSpikes = [];
+    Object.keys(LIMITS).forEach(function (k) {
+      if (!d[k]) return;
+      ys.forEach(function (y) {
+        for (var m = 0; m < 12; m++) {
+          var v = d[k][y] ? d[k][y][m] : null; total++;
+          if (v == null) missing++;
+          else if (v < LIMITS[k][0] || v > LIMITS[k][1]) bad.push(k + ' ' + y + '-' + (m + 1));
+        }
+      });
+    });
+    ys.forEach(function (y) {
+      for (var m = 0; m < 12; m++) {
+        var t = d.T2M[y] && d.T2M[y][m], tx = d.T2M_MAX && d.T2M_MAX[y] && d.T2M_MAX[y][m], tn = d.T2M_MIN && d.T2M_MIN[y] && d.T2M_MIN[y][m];
+        if (t != null && tx != null && tn != null && (tn > t + 0.5 || t > tx + 0.5)) order++;
+      }
+    });
+    for (var m = 0; m < 12; m++) {
+      ys.forEach(function (y) {
+        var others = function (k) { return ys.filter(function (z) { return z !== y && d[k][z] && d[k][z][m] != null; }).map(function (z) { return d[k][z][m]; }); };
+        var t = d.T2M[y] && d.T2M[y][m];
+        if (t != null) { var o = others('T2M'), s = sd(o); if (o.length >= 5 && Math.abs(t - mean(o)) > 6 * Math.max(s, 0.3)) tJumps.push(y + '-' + (m + 1)); }
+        var r = d.PRECTOTCORR[y] && d.PRECTOTCORR[y][m];
+        if (r != null) { var q = others('PRECTOTCORR'), sq = sd(q); if (q.length >= 5 && r * MD[m] > 50 && r > mean(q) + 8 * Math.max(sq, 0.1)) rSpikes.push(y + '-' + (m + 1)); }
+      });
+    }
+    var full = ys.filter(function (y) { return d.T2M[y] && d.T2M[y].every(function (v) { return v != null; }); });
+    return { total: total, missing: missing, bad: bad, order: order, tJumps: tJumps, rSpikes: rSpikes, lastFull: full.length ? full[full.length - 1] : null };
+  }
+  // Open-Meteo archive daily JSON -> {year: {rain, temp, days}}; only years with >= 360 days count.
+  function parseOpenMeteo(j) {
+    var D = j.daily, by = {};
+    D.time.forEach(function (t, i) {
+      var y = +t.slice(0, 4), a = by[y] = by[y] || { rain: 0, tsum: 0, days: 0 };
+      if (D.precipitation_sum[i] != null && D.temperature_2m_mean[i] != null) { a.rain += D.precipitation_sum[i]; a.tsum += D.temperature_2m_mean[i]; a.days++; }
+    });
+    var out = {};
+    Object.keys(by).forEach(function (y) { if (by[y].days >= 360) out[y] = { rain: by[y].rain, temp: by[y].tsum / by[y].days, days: by[y].days }; });
+    return out;
+  }
+  // Annual rainfall and mean temperature, POWER vs a second source, over the years both have in full.
+  function compareSources(d, om, y0, y1) {
+    var yrs = [], P = [], O = [], PT = [], OT = [];
+    for (var y = y0; y <= y1; y++) {
+      var r = d.PRECTOTCORR[y], t = d.T2M[y];
+      if (!om[y] || !r || !t || r.some(function (v) { return v == null; }) || t.some(function (v) { return v == null; })) continue;
+      yrs.push(y); P.push(r.reduce(function (s, v, i) { return s + v * MD[i]; }, 0)); O.push(om[y].rain); PT.push(mean(t)); OT.push(om[y].temp);
+    }
+    if (!yrs.length) return { n: 0 };
+    var rp = mean(P), ro = mean(O);
+    return { n: yrs.length, from: yrs[0], to: yrs[yrs.length - 1], rainP: rp, rainO: ro, rainPct: ro ? (rp - ro) / ro * 100 : null, rainR: corr(P, O),
+      tempP: mean(PT), tempO: mean(OT), dT: mean(PT) - mean(OT), tempR: corr(PT, OT) };
+  }
+
+  return { CROPS: CROPS, NADAS: NADAS, SALT: SALT, LIME: LIME, mannKendall: mannKendall, spi: spi, patterns: patterns, waterYearRain: waterYearRain, normCdf: normCdf, normInv: normInv, gammaP: gammaP, applyDailyMeans: applyDailyMeans, ndviQA: ndviQA, dataChecks: dataChecks, parseOpenMeteo: parseOpenMeteo, compareSources: compareSources, trap: trap, ramp: ramp, seasonStats: seasonStats, POWER_PARAMS: POWER_PARAMS, MD: MD, parsePower: parsePower, climatology: climatology, shiftClim: shiftClim, annual: annual, suit: suit, plan: plan, parseMonth: parseMonth, scheduleRotation: scheduleRotation, checkRotation: checkRotation, findSingleChange: findSingleChange, driestCompleteYear: driestCompleteYear, LIMTXT: LIMTXT, LIMFARM: LIMFARM, GROUP: GROUP, FAMTR: FAMTR, LIMTXT_EN: LIMTXT_EN, LIMFARM_EN: LIMFARM_EN, GROUP_EN: GROUP_EN, FAMEN: FAMEN, setLang: setLang, ndviSummary: ndviSummary, synthPower: synthPower, mean: mean, slope: slope };
 })();
 
 
@@ -1515,7 +1596,9 @@ const I18N = {
   "Ürün uygunluk tablosu": "Crop suitability table",
   "NASA verisi ve karara etkisi tablosu": "Table of NASA data and its effect on the decision",
   "Ürün eşikleri tablosu": "Crop threshold table",
-  "Dil": "Language"
+  "Dil": "Language",
+  "Veri kontrolleri": "Data checks",
+  "İkinci kaynak: ERA5 yeniden analizi (Open-Meteo arşivi, ~25 km ızgara). NASA POWER ~50 km ızgaradır; iki kaynak arasında küçük farklar olağandır. Kontroller her hesapta yeniden yapılır.": "Second source: ERA5 reanalysis (Open-Meteo archive, ~25 km grid). NASA POWER is a ~50 km grid, so small differences between the two are normal. The checks run again with every calculation."
 };
 const srcText = new WeakMap(), srcAttr = new WeakMap(), norm = s => s.replace(/\s+/g, ' ').trim();
 function translateDom(root = document.body) {
@@ -1855,7 +1938,7 @@ async function fetchAll(lat, lon) {
   }
   const early = await Promise.race([soilP, new Promise(r => setTimeout(() => r(null), Math.max(0, SOIL_WAIT - (performance.now() - t0))))]);
   if (gen !== fetchGen) return;
-  S.demo = false; S.snap = null; $('demoNote').hidden = true;
+  S.demo = false; S.snap = null; S.loc = [lat, lon]; $('demoNote').hidden = true;
   S.data = FS.parsePower(pw.value);
   S.ndvi = [];
   S.live = { soil: 'pending', daily: !!pw.value.dailyMeans, ndvi: 'pending' };
@@ -1872,7 +1955,7 @@ async function fetchAll(lat, lon) {
     S.ndvi = nd; S.live.ndvi = nd.some(p => p.v != null) ? 'ok' : 'none';
     liveStatus(); compute(false);
     if (S.live.ndvi === 'ok') toast(T('MODIS yeşillik verisi geldi; plan güncellendi', 'MODIS greenness data arrived; plan updated'), 'check');
-  }, () => { if (gen !== fetchGen) return; S.live.ndvi = 'fail'; liveStatus(); });
+  }, () => { if (gen !== fetchGen) return; S.live.ndvi = 'fail'; liveStatus(); renderChecks(); });
 }
 // res: null = still loading, {ok, value|reason} = answered.
 function applySoilAnswer(res) {
@@ -1906,7 +1989,7 @@ $('demo').addEventListener('click', () => runDemo(true));
 $('reset').addEventListener('click', () => { restore(DEFAULTS); compute(); if (!S.changedToast) toast(T('Ayarlar varsayılana döndü', 'Settings back to defaults'), 'check'); });
 function runDemo(scroll) {
   if (busy) return;
-  fetchGen++; S.demo = true; S.snap = null; $('demoNote').hidden = false; $('srcStatus').hidden = true;
+  fetchGen++; S.demo = true; S.snap = null; S.loc = null; $('demoNote').hidden = false; $('srcStatus').hidden = true;
   S.data = FS.parsePower(FS.synthPower(+$('lat').value));
   S.soilSat = { ph: 7.9, clay: 32, soc: 9 }; applySoil(); setText('soilNote', () => T('Örnek tarla toprak değerleri (sentetik).', 'Example field soil values (synthetic).'));
   S.ndvi = []; for (let y = 2021; y <= 2025; y++) for (let k = 0; k < 23; k++) { const doy = k * 16 + 1; const v = 0.15 + (0.45 - (y - 2021) * 0.02) * Math.exp(-((doy - 135) ** 2) / 1800); S.ndvi.push({ d: `${y}-${String(Math.ceil(doy / 30.5)).padStart(2, '0')}-01`, v }); }
@@ -1924,7 +2007,7 @@ function snapPower(sn) {
 function loadSnap(key, scroll, force) {
   const sn = SNAP[key]; if (!sn || (busy && !force)) return false;
   if (!force) fetchGen++;
-  S.demo = false; S.snap = sn.fetched; $('demoNote').hidden = true; $('srcStatus').hidden = true;
+  S.demo = false; S.snap = sn.fetched; S.loc = [sn.lat, sn.lon]; $('demoNote').hidden = true; $('srcStatus').hidden = true;
   S.data = FS.parsePower(snapPower(sn));
   if (sn.soil && sn.soil.ph != null) { S.soilSat = sn.soil; applySoil(); setText('soilNote', () => T(`SoilGrids (0–30 cm, ${sn.fetched} kaydı): pH ${sn.soil.ph.toFixed(1)}, kil %${fmt(sn.soil.clay)}, organik karbon ${fmt(sn.soil.soc, 1)} g/kg.`, `SoilGrids (0–30 cm, saved ${sn.fetched}): pH ${sn.soil.ph.toFixed(1)}, clay ${fmt(sn.soil.clay)}%, organic carbon ${fmt(sn.soil.soc, 1)} g/kg.`)); }
   else { S.soilSat = null; applySoil(); setText('soilNote', () => T('Bu kayıtta SoilGrids verisi yok; pH ve kili elle gir.', 'This record has no SoilGrids data; enter pH and clay by hand.')); }
@@ -1942,7 +2025,7 @@ function renderThresholds() {
 renderThresholds();
 
 // ---------- Compute ----------
-const BANDS = ['planBand', 'sumBand', 'patternBand', 'shiftBand', 'suitBand', 'climBand', 'soilBand'];
+const BANDS = ['planBand', 'sumBand', 'patternBand', 'shiftBand', 'suitBand', 'climBand', 'soilBand', 'checkBand'];
 function compute(scroll) {
   syncPlanningControls();
   const planning = readPlanning();
@@ -1997,6 +2080,7 @@ function compute(scroll) {
   renderPatterns();
   renderSuit(sb, sr, ss);
   renderClimate(first, last, drought);
+  renderChecks();
   flashChanged();
   // scroll === undefined: recomputed because the user changed a setting (not data loading or a slider tick).
   const planNow = P.top[0] ? seqTxt(P.top[0]) : '';
@@ -2405,6 +2489,93 @@ $('csv').addEventListener('click', () => {
   a.download = `argis_${$('lat').value}_${$('lon').value}${S.demo ? T('_SENTETIK', '_SYNTHETIC') : ''}.csv`; a.click(); setTimeout(() => URL.revokeObjectURL(a.href), 1000);
   toast(T(`${d._years.length} yıllık veri indirildi`, `${d._years.length} years of data downloaded`), 'download');
 });
+
+// ---------- Data checks ----------
+// Each check reads the data the plan was made from. The second source (ERA5 reanalysis via the
+// Open-Meteo archive) is fetched once per place and window, in the background; until it answers,
+// or if it cannot be reached, that row says so and nothing else waits for it.
+const secondCache = new Map();
+function ensureSecond() {
+  if (!S.loc) { S.second = { state: 'na' }; return; }
+  const [la, lo] = S.loc, y0 = S.rec.y0, y1 = S.rec.y1, key = `${(+la).toFixed(2)},${(+lo).toFixed(2)},${y0}-${y1}`;
+  if (S.second && S.second.key === key) return;
+  if (secondCache.has(key)) { S.second = { key, state: 'ok', om: secondCache.get(key) }; return; }
+  S.second = { key, state: 'pending' };
+  const url = `https://archive-api.open-meteo.com/v1/archive?latitude=${la}&longitude=${lo}&start_date=${y0}-01-01&end_date=${y1}-12-31&daily=precipitation_sum,temperature_2m_mean&timezone=UTC`;
+  fetchT(url, {}, 30000).then(r => { if (!r.ok) throw new Error('Open-Meteo ' + r.status); return r.json(); }).then(j => {
+    const om = FS.parseOpenMeteo(j); secondCache.set(key, om);
+    if (S.second.key === key) { S.second = { key, state: 'ok', om }; renderChecks(); }
+  }, () => { if (S.second.key === key) { S.second = { key, state: 'fail' }; renderChecks(); } });
+}
+function renderChecks() {
+  if (!S.data) return;
+  ensureSecond();
+  const c = FS.dataChecks(S.data), L = !S.snap && !S.demo ? S.live : null, items = [];
+  const add = (id, k, t, d, tag) => items.push({ id, k, t, d, tag });
+  const pctTxt = p => { const v = Math.round(p), sg = v > 0 ? '+' : v < 0 ? '−' : ''; return T(`${sg}%${Math.abs(v)}`, `${sg}${Math.abs(v)}%`); };
+
+  const fresh = T('Veri güncelliği', 'Data freshness');
+  if (S.demo) add('fresh', 'nil', fresh, T('Sentetik örnek: gerçek veri değil.', 'Synthetic example: not real data.'));
+  else {
+    const age = S.snap ? Math.max(0, Math.round((Date.now() - Date.parse(S.snap)) / 864e5)) : null;
+    const ok = c.lastFull != null && c.lastFull >= new Date().getFullYear() - 2 && (age == null || age <= 400);
+    add('fresh', ok ? 'ok' : 'risk', fresh, S.snap
+      ? T(`Son tam yıl ${c.lastFull} · kayıtlı veri, ${S.snap} (${age} gün önce).`, `Latest full year ${c.lastFull} · saved data, ${S.snap} (${age} days ago).`)
+      : T(`Son tam yıl ${c.lastFull} · NASA POWER'dan şimdi çekildi.`, `Latest full year ${c.lastFull} · fetched from NASA POWER just now.`));
+  }
+  const share = c.total ? c.missing / c.total * 100 : 0;
+  add('missing', c.missing === 0 ? 'ok' : share <= 2 ? 'risk' : 'no', T('Eksik değer', 'Missing values'),
+    T(`${fmtN(c.total)} aylık değerden ${c.missing} tanesi eksik.`, `${c.missing} of ${fmtN(c.total)} monthly values missing.`));
+  const ex = c.bad.length ? T(` Örnek: ${c.bad.slice(0, 2).join(', ')}.`, ` E.g. ${c.bad.slice(0, 2).join(', ')}.`) : '';
+  add('limits', c.bad.length || c.order ? 'risk' : 'ok', T('Fiziksel sınırlar', 'Physical limits'),
+    T(`${c.bad.length} değer fiziksel sınırların dışında; ${c.order} ayda en düşük ≤ ortalama ≤ en yüksek sıcaklık sırası bozuk.`, `${c.bad.length} values outside physical limits; the min ≤ mean ≤ max temperature order is broken in ${c.order} months.`) + ex);
+  const jumps = [...c.tJumps, ...c.rSpikes];
+  add('jumps', jumps.length ? 'risk' : 'ok', T('Ani sıçramalar', 'Unrealistic jumps'),
+    T(`${c.tJumps.length} sıcaklık sıçraması, ${c.rSpikes.length} yağış uç değeri (her ay, aynı ayın diğer yıllarıyla karşılaştırılır).`, `${c.tJumps.length} temperature jumps, ${c.rSpikes.length} rainfall spikes (each month is compared with the same month in other years).`)
+    + (jumps.length ? T(` Ay: ${jumps.slice(0, 3).join(', ')}.`, ` Months: ${jumps.slice(0, 3).join(', ')}.`) : ''));
+  const daily = T('Günlük sıcaklık', 'Daily temperatures');
+  if (S.demo) add('daily', 'nil', daily, T('Sentetik örnekte yok.', 'Not in the synthetic example.'));
+  else if (!L || L.daily) add('daily', 'ok', daily, T('Kavrulma ve don, günlük en yüksek / en düşük sıcaklıkların aylık ortalamasıyla hesaplandı.', 'Heat and frost use the monthly means of daily highs / lows.'));
+  else add('daily', 'risk', daily, T('Günlük veri alınamadı; aylık uç değerler kullanıldı, kavrulma ve don riski abartılı olabilir.', 'Daily data could not be fetched; monthly extremes were used, so heat and frost risk may be overstated.'));
+
+  const second = T('İkinci kaynakla karşılaştırma', 'Second-source comparison'), sec = S.second || {};
+  if (sec.state === 'na') add('second', 'nil', second, T('Sentetik örnekte yapılmaz.', 'Not done for the synthetic example.'));
+  else if (sec.state === 'pending') add('second', 'nil', second, T('ERA5 (Open-Meteo) verisi yükleniyor…', 'Loading ERA5 (Open-Meteo) data…'), T('Bekleniyor', 'Pending'));
+  else if (sec.state === 'fail') add('second', 'nil', second, T('İkinci kaynağa ulaşılamadı; karşılaştırma yapılmadı.', 'Could not reach the second source; no comparison made.'));
+  else {
+    const m = FS.compareSources(S.data, sec.om, S.rec.y0, S.rec.y1);
+    if (m.n < 3) add('second', 'nil', second, T('Karşılaştırmak için yeterli ortak yıl yok.', 'Not enough years in common to compare.'));
+    else {
+      const rainOk = Math.abs(m.rainPct) <= 25, tempOk = Math.abs(m.dT) <= 2;
+      const raw = `<span class="raw eng-only"> r (${T('yağış', 'rain')}) = ${fmt(m.rainR, 2)} · r (${T('sıcaklık', 'temp.')}) = ${fmt(m.tempR, 2)}</span>`;
+      add('second', rainOk && tempOk ? 'ok' : 'risk', second,
+        T(`${m.from}–${m.to} ortalaması · yıllık yağış: NASA POWER ${fmtN(m.rainP)} mm, ERA5 ${fmtN(m.rainO)} mm (${pctTxt(m.rainPct)}) · sıcaklık: ${dec(fmt(m.tempP, 1))} / ${dec(fmt(m.tempO, 1))} °C.`,
+          `${m.from}–${m.to} mean · annual rainfall: NASA POWER ${fmtN(m.rainP)} mm, ERA5 ${fmtN(m.rainO)} mm (${pctTxt(m.rainPct)}) · temperature: ${fmt(m.tempP, 1)} / ${fmt(m.tempO, 1)} °C.`)
+        + (rainOk ? '' : T(' <b>Yağış farkı büyük:</b> planın su hesabı NASA POWER yağışına dayanır; yakındaki bir meteoroloji istasyonunun ölçümüyle karşılaştır.', ' <b>Large rainfall gap:</b> the plan’s water budget rests on NASA POWER rainfall; compare it with a nearby weather station.'))
+        + (tempOk ? '' : T(' Sıcaklık farkı büyük; iki kaynağın ızgara yüksekliği farklı olabilir.', ' Large temperature gap; the two grids may sit at different elevations.')) + raw);
+    }
+  }
+  const sat = T('Uydu yeşilliği (MODIS)', 'Satellite greenness (MODIS)'), nd = FS.ndviSummary(S.ndvi), pts = S.ndvi.filter(p => p.v != null).length, dropped = S.ndvi.dropped || 0;
+  if (S.demo) add('modis', 'nil', sat, T('Sentetik örnek.', 'Synthetic example.'));
+  else if (L && L.ndvi === 'pending') add('modis', 'nil', sat, T('MODIS verisi yükleniyor…', 'Loading MODIS data…'), T('Bekleniyor', 'Pending'));
+  else if (nd.years.length >= 3) add('modis', 'ok', sat, T(`${nd.years.length} yıl, ${pts} tarih${dropped ? `; ${dropped} bulutlu/karlı tarih ayıklandı` : ''}.`, `${nd.years.length} years, ${pts} dates${dropped ? `; ${dropped} cloudy/snowy dates removed` : ''}.`));
+  else add('modis', 'risk', sat, nd.years.length ? T(`Yalnızca ${nd.years.length} yıl var; yeşillik eğilimi zayıf dayanaklı.`, `Only ${nd.years.length} years; the greenness trend rests on little data.`) : T('Uydu verisi yok; yeşillik eğilimi plana girmedi.', 'No satellite data; the greenness trend is not in the plan.'));
+  const soil = T('Toprak verisi', 'Soil data'), st = $('soilType').value;
+  if (S.demo && st === 'auto') add('soil', 'nil', soil, T('Sentetik örnek.', 'Synthetic example.'));
+  else if (L && L.soil === 'pending' && st === 'auto') add('soil', 'nil', soil, T('SoilGrids yükleniyor…', 'Loading SoilGrids…'), T('Bekleniyor', 'Pending'));
+  else if (st === 'ozel') add('soil', 'ok', soil, T('Toprak analiz raporundaki değerler kullanılıyor.', 'Values from your soil test report are used.'));
+  else if (st !== 'auto') add('soil', 'ok', soil, T('Seçtiğin toprak cinsinin yaklaşık değerleri kullanılıyor.', 'Approximate values for the soil type you chose are used.'));
+  else if (S.soil.ph != null && S.soil.clay != null) add('soil', 'ok', soil, T(`SoilGrids tahmini (250 m): pH ${dec(fmt(S.soil.ph, 1))}, kil %${fmt(S.soil.clay)}.`, `SoilGrids estimate (250 m): pH ${fmt(S.soil.ph, 1)}, clay ${fmt(S.soil.clay)}%.`));
+  else add('soil', 'risk', soil, T('Toprak verisi yok; sıralama eksik veriyle yapıldı.', 'No soil data; the ranking was made with missing data.'));
+
+  const okN = items.filter(i => i.k === 'ok').length, warnN = items.filter(i => i.k === 'risk' || i.k === 'no').length, N = items.length;
+  const warns = warnN ? T(` · ${warnN} uyarı`, ` · ${warnN} ${warnN === 1 ? 'warning' : 'warnings'}`) : '';
+  $('checkTitle').textContent = T(`${N} kontrolden ${okN} tanesi geçti`, `${okN} of ${N} checks passed`) + warns;
+  $('checkLink').textContent = T(`Veri kontrolleri: ${okN}/${N} geçti`, `Data checks: ${okN}/${N} passed`) + warns.replace(' · ', ', ');
+  $('checkLink').dataset.k = 'checks';
+  const TAG = { ok: T('Geçti', 'Passed'), risk: T('Uyarı', 'Warning'), no: T('Sorun', 'Problem'), nil: T('Kontrol edilmedi', 'Not checked') };
+  $('checks').innerHTML = items.map(i => `<li data-chk="${i.id}" data-state="${i.k}"><b>${i.t}</b>${bdg({ k: i.k, t: i.tag || TAG[i.k] })}<span class="sm">${i.d}</span></li>`).join('');
+}
 
 // ---------- Charts ----------
 function meanAnnualRain(period) {

@@ -325,3 +325,41 @@ test('dry replay uses the least rainy complete climate year and skips incomplete
   assert.notEqual(next.year, dry.year);
   assert.ok(next.rain > dry.rain);
 });
+
+test('dataChecks: the four saved regions are clean; planted errors are caught', () => {
+  for (const [k, sn] of Object.entries(F.snapshots())) {
+    const c = F.dataChecks(F.parsePower(F.snapPower(sn)));
+    assert.deepEqual([c.missing, c.bad.length, c.order, c.tJumps.length, c.rSpikes.length], [0, 0, 0, 0, 0], k);
+    assert.equal(c.lastFull, 2025, k);
+  }
+  const d = F.parsePower(F.snapPower(F.snapshots().konya));
+  d.T2M[2010][6] = 45.5;            // above the limit and far from every other July: limit + jump
+  d.PRECTOTCORR[2012][3] = 30;      // 900 mm in one April: rain spike
+  d.PRECTOTCORR[2013][4] = null;    // a gap
+  d.T2M_MIN[2014][0] = d.T2M[2014][0] + 3; // minimum above the mean
+  const c = F.dataChecks(d);
+  assert.equal(c.missing, 1);
+  assert.deepEqual([...c.bad], ['T2M 2010-7']); // spread: arrays come from the page's VM context
+  assert.deepEqual([...c.tJumps], ['2010-7']);
+  assert.deepEqual([...c.rSpikes], ['2012-4']);
+  assert.equal(c.order, 2); // 2010-7 (mean above max) and 2014-1
+});
+
+test('parseOpenMeteo + compareSources: yearly totals, percent difference, full years only', () => {
+  const d = F.parsePower(F.snapPower(F.snapshots().trakya));
+  // Second source = POWER itself with 20 % less rain and 1 °C cooler, as daily values.
+  const time = [], rain = [], temp = [];
+  for (let y = 2020; y <= 2022; y++) for (let m = 0; m < 12; m++) {
+    const days = new Date(Date.UTC(y, m + 1, 0)).getUTCDate();
+    for (let k = 1; k <= days; k++) { time.push(`${y}-${String(m + 1).padStart(2, '0')}-${String(k).padStart(2, '0')}`); rain.push(d.PRECTOTCORR[y][m] * F.MD[m] / days * 0.8); temp.push(d.T2M[y][m] - 1); }
+  }
+  time.push('2023-01-01'); rain.push(5); temp.push(3); // a partial year: ignored
+  const om = F.parseOpenMeteo({ daily: { time, precipitation_sum: rain, temperature_2m_mean: temp } });
+  assert.deepEqual(Object.keys(om), ['2020', '2021', '2022']);
+  const c = F.compareSources(d, om, 2016, 2025);
+  assert.equal(c.n, 3); assert.equal(c.from, 2020); assert.equal(c.to, 2022);
+  near(c.rainPct, 25, 1e-6);   // POWER is 1 / 0.8 = 125 % of the second source
+  near(c.rainR, 1, 1e-9);
+  near(c.dT, 1, 0.1);          // month-weighted (POWER) vs day-weighted mean: short February shifts it a little
+  assert.equal(F.compareSources(d, {}, 2016, 2025).n, 0);
+});

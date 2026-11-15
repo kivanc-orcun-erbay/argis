@@ -38,11 +38,25 @@ function modis(region) {
   return { dates: { dates }, subset };
 }
 
+// Open-Meteo archive (second source for the data checks): daily values built from the saved POWER
+// months, so by default the two sources agree; rainFactor scales the rain to make them disagree.
+function openMeteo(region, start, end, rainFactor = 1) {
+  const pw = load(`${region}_power`), time = [], precipitation_sum = [], temperature_2m_mean = [];
+  for (let t = Date.parse(start + 'T00:00:00Z'); t <= Date.parse(end + 'T00:00:00Z'); t += 864e5) {
+    const d = new Date(t), y = d.getUTCFullYear(), m = d.getUTCMonth(), i = (y - pw.y0) * 12 + m;
+    time.push(d.toISOString().slice(0, 10));
+    precipitation_sum.push(pw.p.PRECTOTCORR[i] == null ? null : pw.p.PRECTOTCORR[i] * rainFactor);
+    temperature_2m_mean.push(pw.p.T2M[i]);
+  }
+  return { daily: { time, precipitation_sum, temperature_2m_mean } };
+}
+
 const json = (route, body, status = 200) => route.fulfill({ status, contentType: 'application/json', headers: { 'Access-Control-Allow-Origin': '*' }, body: JSON.stringify(body) });
 
 /**
- * Install routes on a page. opts: { region, power, daily, soil, modis } where each service is
- * 'ok' (default), 'fail' (HTTP 503) or a number of ms to delay an ok answer.
+ * Install routes on a page. opts: { region, power, daily, soil, modis, second } where each service is
+ * 'ok' (default), 'fail' (HTTP 503) or a number of ms to delay an ok answer. secondRain scales the
+ * second source's rainfall (default 1 = same as POWER).
  */
 async function mockServices(page, opts = {}) {
   const region = opts.region || 'konya';
@@ -58,6 +72,10 @@ async function mockServices(page, opts = {}) {
   await page.route('https://power.larc.nasa.gov/**', route => {
     const daily = route.request().url().includes('/temporal/daily/');
     return daily ? answer(route, 'daily', powerDaily(region)) : answer(route, 'power', powerMonthly(region, opts.missingRainMonth));
+  });
+  await page.route('https://archive-api.open-meteo.com/**', route => {
+    const u = new URL(route.request().url());
+    return answer(route, 'second', openMeteo(region, u.searchParams.get('start_date'), u.searchParams.get('end_date'), opts.secondRain || 1));
   });
   await page.route('https://rest.isric.org/**', route => answer(route, 'soil', soilgrids(region)));
   await page.route('https://modis.ornl.gov/**', route => {
