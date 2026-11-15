@@ -209,6 +209,25 @@ test('spi: centred on zero, increases with rainfall, flags the driest year', () 
   assert.ok(z[rain.indexOf(600)] > 1, 'wettest year should be at least moderately wet');
 });
 
+test('annual: missing rain excludes that year from the rain trend and keeps temperature', () => {
+  const d = F.parsePower(F.synthPower(37.87));
+  const year = 2025;
+  d.PRECTOTCORR[year][0] = 0;
+  const withZero = F.annual(d);
+  const index = withZero.years.indexOf(year);
+  assert.ok(Number.isFinite(withZero.rain[index]));
+  const sampleSize = F.patterns(d).series.find(({ key }) => key === 'rain').mk.n;
+
+  d.PRECTOTCORR[year][0] = null;
+  const withMissing = F.annual(d);
+  assert.equal(withMissing.rain[index], null);
+  assert.equal(withMissing.temp[index], withZero.temp[index]);
+  assert.equal(F.patterns(d).series.find(({ key }) => key === 'rain').mk.n, sampleSize - 1);
+
+  delete d.PRECTOTCORR[year];
+  assert.equal(F.annual(d).rain[index], null);
+});
+
 test('waterYearRain: October-September totals', () => {
   const d = F.parsePower(F.synthPower(37.87));
   const wy = F.waterYearRain(d);
@@ -236,4 +255,73 @@ test('setLang: English crop names and reasons, same plan, and back to Turkish', 
   } finally { F.setLang('tr'); }
   assert.equal(crop('bugday').n, 'Buğday');
   assert.deepEqual(run().notes, tr.notes);
+});
+
+test('rotation calendar advances after harvest, includes a full fallow year, and reports the first harvest', () => {
+  const wheat = F.CROPS.find(c => c.id === 'bugday');
+  const chickpea = F.CROPS.find(c => c.id === 'nohut');
+  const month = F.parseMonth;
+  const calendar = F.scheduleRotation([wheat, F.NADAS, chickpea], month('2026-07'));
+  assert.equal(calendar.seasons[0].start, month('2026-10'));
+  assert.equal(calendar.firstHarvest, month('2027-06'));
+  assert.equal(calendar.seasons[1].end, month('2028-06'));
+  assert.equal(calendar.seasons[2].start, month('2029-03'));
+  assert.equal(calendar.uncropped, 23);
+  assert.equal(F.scheduleRotation([F.NADAS], month('2026-07')).firstHarvest, null);
+  assert.equal(F.parseMonth('2026-13'), null);
+});
+
+test('deadline and quota apply to the first actual harvest and every planted season', () => {
+  const konya = F.snapshots().konya;
+  const data = F.parsePower(F.snapPower(konya));
+  const climate = F.climatology(data, 2016, 2025);
+  const suits = Object.fromEntries(F.CROPS.map(c => [c.id, F.suit(c, climate, konya.soil, true)]));
+  const start = F.parseMonth('2026-12');
+  const opts = { suits, start, years: 3, irrigation: true, next: 'misir' };
+  const late = F.plan({ ...opts, deadline: F.parseMonth('2027-07'), quota: 999 });
+  assert.equal(late.count, 0);
+  assert.ok(late.screen.earliest > F.parseMonth('2027-07'));
+  const withoutWater = F.plan({ ...opts, quota: 0 });
+  assert.equal(withoutWater.count, 0);
+  assert.equal(withoutWater.screen.minimum, suits.misir.irrUse);
+  const fits = F.plan({ ...opts, quota: 999, deadline: F.parseMonth('2027-12') });
+  assert.ok(fits.top.length);
+  fits.top.forEach(({ seq }) => {
+    assert.ok(F.checkRotation(seq, { ...opts, quota: 999, deadline: F.parseMonth('2027-12') }, F.scheduleRotation(seq, start)).eligible);
+  });
+  climate.R[5] = null;
+  const incomplete = F.shiftClim(climate, 1, -20);
+  assert.equal(incomplete.R[5], null);
+  suits.misir = F.suit(F.CROPS.find(c => c.id === 'misir'), incomplete, konya.soil, true);
+  const unknown = F.plan({ ...opts, quota: 999 });
+  assert.equal(unknown.count, 0);
+  assert.ok(unknown.screen.unknownWater > 0);
+});
+
+test('single change preserves locked years and respects a fixed first crop', () => {
+  const konya = F.snapshots().konya;
+  const climate = F.climatology(F.parsePower(F.snapPower(konya)), 2016, 2025);
+  const suits = Object.fromEntries(F.CROPS.map(c => [c.id, F.suit(c, climate, konya.soil, false)]));
+  const wheat = F.CROPS.find(c => c.id === 'bugday');
+  const sequence = [wheat, F.NADAS, wheat, wheat];
+  const opts = { suits, start: F.parseMonth('2026-12'), next: 'bugday', prev: 'bugday', irrigation: false };
+  const { best } = F.findSingleChange(sequence, [true, false, true, true], opts);
+  assert.ok(best);
+  assert.equal(best.index, 1);
+  assert.equal(best.seq.filter((crop, i) => crop !== sequence[i]).length, 1);
+  assert.notEqual(best.seq[1].irr, 'yes');
+  assert.equal(F.findSingleChange(sequence, [true, true, true, true], opts).best, null);
+  assert.equal(F.findSingleChange(sequence, [], { ...opts, deadline: opts.start }).best, null);
+});
+
+test('dry replay uses the least rainy complete climate year and skips incomplete records', () => {
+  const konya = F.snapshots().konya;
+  const data = F.parsePower(F.snapPower(konya));
+  const dry = F.driestCompleteYear(data);
+  assert.equal(dry.year, 2013);
+  assert.equal(dry.climate.y0, dry.climate.y1);
+  data.GWETROOT[dry.year][0] = null;
+  const next = F.driestCompleteYear(data);
+  assert.notEqual(next.year, dry.year);
+  assert.ok(next.rain > dry.rain);
 });

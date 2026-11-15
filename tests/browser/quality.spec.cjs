@@ -20,6 +20,8 @@ test.describe('phone (375 px)', () => {
     expect(await noSideScroll(page)).toBe(true);
     await page.locator('#vEng').click();
     await page.locator('#labBox summary').click();
+    await page.locator('#currentPlan summary').click();
+    await page.locator('#planningBox summary').click();
     expect(await noSideScroll(page)).toBe(true);
     await expect(page.locator('#go')).toBeVisible();
     await page.locator('#planBand').scrollIntoViewIfNeeded();
@@ -53,6 +55,8 @@ for (const view of ['farm', 'eng']) {
   test(`accessibility: no serious or critical axe violations (${view} view)`, async ({ page }) => {
     await ready(page);
     if (view === 'eng') await page.locator('#vEng').click();
+    await page.locator('#currentPlan summary').click();
+    if (view === 'eng') await page.locator('#planningBox summary').click();
     // Sections fade in (0.22 s); scanning mid-fade measures half-transparent text as low contrast.
     await page.waitForFunction(() => document.getAnimations().every(a => a.playState !== 'running'));
     // The Leaflet map is third-party; its own controls are out of scope here.

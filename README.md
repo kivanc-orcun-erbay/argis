@@ -14,6 +14,10 @@ NASA iklim verileriyle açıklanabilir münavebe planı üreten araştırma prot
 
 Sayfa Türkçe ve İngilizcedir: sağ üstteki **TR / EN** düğmesiyle dil değişir ve seçim hatırlanır. `?lang=en` ile doğrudan İngilizce açılır (ör. https://argis-mu.vercel.app/?lang=en).
 
+**Mevcut planımla karşılaştır** bölümünde 2–4 yıllık planını girip koruyacağın ekimleri seçebilirsin. Tek değişiklik önerisi sırasıyla uygunluk kontrolünü geçemeyen ürünleri, aile tekrarlarını, sulu tarlada en yüksek sezonluk sulamayı ve ana ürünsüz ayları karşılaştırır.
+
+**Mühendis → Plan kısıtları ve kurak yıl** bölümünde başlangıç ayı, ilk hasat için son ay ve sulu tarlada sezonluk net sulama kotası seçilebilir. Nadas takvimde 12 ay sürer. Kota ve hasat sınırı puanlamadan önce uygulanır. Kurak yıl seçeneği, öneriyi seçilen tarlanın kayıtlardaki en düşük yağışlı tam iklim yılıyla sınar. **Yöntem** altında Konya nohut ve Haymana buğday denemelerinin saha sonuçları Argis hesaplarıyla gösterilir.
+
 ## Kontrol
 
 ```sh

@@ -55,6 +55,44 @@ test('English after live data, a map click and the hot scenario: no Turkish left
   expect(await turkishLeft(page)).toEqual([]);
 });
 
+test('changing language translates open planning and evidence panels and preserves their inputs', async ({ page }) => {
+  const errors = watchErrors(page);
+  await page.locator('#vEng').click();
+  await page.locator('#currentPlan summary').click();
+  await page.selectOption('#cycle1', 'bugday');
+  await page.selectOption('#cycle2', 'nadas');
+  await page.selectOption('#cycle3', 'bugday');
+  await page.check('#keep1');
+  await page.locator('#planningBox summary').click();
+  await page.check('#irr');
+  await page.fill('#startMonth', '2026-12');
+  await page.fill('#harvestDeadline', '2028-12');
+  await page.fill('#waterQuota', '999');
+  await page.check('#replayDry');
+  await page.locator('#fieldEvidence summary').click();
+  await expect(page.locator('#fieldEvidenceRows')).toContainText('ölçülen tüketim');
+  const trPlan = await ids(page);
+
+  await page.locator('#lEn').click();
+  await expect(page.locator('#currentPlan summary')).toHaveText('Compare with my current plan');
+  await expect(page.locator('#cycle1')).toHaveValue('bugday');
+  await expect(page.locator('#cycle1 option:checked')).toHaveText('Wheat');
+  await expect(page.locator('#keep1')).toBeChecked();
+  await expect(page.locator('#keep1')).toHaveAccessibleName('Keep this crop (year 1)');
+  await expect(page.locator('#singleChangeBefore')).toHaveText('Current plan · Wheat → Fallow → Wheat');
+  await expect(page.locator('#singleChangeMeasures')).toContainText('Peak seasonal irrigation');
+  await expect(page.locator('#constraintResult')).toContainText('First harvest by December 2028');
+  await expect(page.locator('#waterQuota')).toHaveValue('999');
+  await expect(page.locator('#dryResult')).toContainText('Dry-year test · 2013');
+  await expect(page.locator('#fieldEvidenceRows')).toContainText('241 mm measured water use');
+  expect(await ids(page)).toEqual(trPlan);
+
+  await page.locator('#lTr').click();
+  await expect(page.locator('#singleChangeBefore')).toHaveText('Mevcut plan · Buğday → Nadas → Buğday');
+  await expect(page.locator('#fieldEvidenceRows')).toContainText('ölçülen tüketim');
+  expect(errors).toEqual([]);
+});
+
 test('the choice is remembered, and ?lang=en opens in English', async ({ page }) => {
   await page.locator('#lEn').click();
   await page.reload();

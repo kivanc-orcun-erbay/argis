@@ -112,7 +112,7 @@ body.eng .farm-only{display:none!important}
 .field{display:flex;flex-direction:column;gap:6px}
 .field > label,.lbl{font-size:var(--f-sm);font-weight:600;color:var(--ink-2)}
 input,select,button{font:inherit;color:inherit}
-input[type=number],select{width:100%;min-height:44px;padding:0 var(--s3);border:1px solid var(--line-strong);border-radius:var(--r-sm);background:var(--bg);font-size:var(--f-md);transition:border-color var(--t-fast)}
+input[type=number],input[type=month],#planningBox input[type=text],select{width:100%;min-width:0;min-height:44px;padding:0 var(--s3);border:1px solid var(--line-strong);border-radius:var(--r-sm);background:var(--bg);font-size:var(--f-md);transition:border-color var(--t-fast)}
 input[type=number]{font-variant-numeric:tabular-nums}
 input[type=number]:hover,select:hover{border-color:var(--ink-3)}
 input[type=range]{width:100%;accent-color:var(--accent)}
@@ -147,6 +147,10 @@ input[type=range]{width:100%;accent-color:var(--accent)}
 .lab summary{cursor:pointer;min-height:44px;display:flex;align-items:center;font-size:var(--f-sm);font-weight:700;color:var(--ink-2)}
 .lab[open]{padding-bottom:var(--s3)}
 .lab[open] > *:not(summary){margin-top:var(--s2)}
+.keep-cycle{display:flex;align-items:center;gap:var(--s2);min-height:36px}
+#planningError{color:var(--bad)}
+#singleChange{display:grid;gap:var(--s2);margin-top:var(--s5)}
+#singleChange strong{color:var(--accent)}
 .tune{display:flex;flex-direction:column;gap:var(--s3);padding:var(--s4);background:var(--bg);border-radius:var(--r-md)}
 .tune .lbl{display:flex;justify-content:space-between}
 .tune output{font-weight:700;color:var(--ink)}
@@ -481,6 +485,22 @@ td .sub{font-size:var(--f-xs);color:var(--ink-3)}
         </div>
         <p class="xs muted">EC: raporda “mmhos/cm” yazıyorsa aynı sayıdır. Yalnızca “toplam tuz %” varsa EC alanını boş bırak.</p>
       </details>
+      <details class="lab" id="currentPlan">
+        <summary>Mevcut planımla karşılaştır</summary>
+        <p class="xs muted" id="currentHelp" role="status">Her yıl için bir ürün veya nadas seç. Korumak istediğin ekimleri işaretle.</p>
+        <div class="row" id="currentYears"></div>
+      </details>
+      <details class="lab eng-only" id="planningBox">
+        <summary>Plan kısıtları ve kurak yıl</summary>
+        <div class="row">
+          <div class="field"><label for="startMonth">Plan başlangıcı</label><input id="startMonth" type="month" placeholder="YYYY-AA" aria-describedby="planningHelp"></div>
+          <div class="field"><label for="harvestDeadline">İlk hasat için son ay</label><input id="harvestDeadline" type="month" placeholder="YYYY-AA" aria-describedby="planningHelp"></div>
+        </div>
+        <div class="field" id="quotaField" hidden><label for="waterQuota">Sezonluk net sulama kotası (m³/da)</label><input id="waterQuota" type="number" min="0" step="any" inputmode="decimal" aria-describedby="planningHelp"></div>
+        <label class="opt"><input type="checkbox" id="replayDry"><span><b>Kayıtlardaki en kurak tam yılı dene</b></span></label>
+        <p class="xs muted" id="planningHelp">Ayları yıl ve ay olarak gir. Başlangıç boşsa bu ay kullanılır. Kota bir ürün sezonu için kök bölgesine ulaşan sudur.</p>
+        <p class="xs" id="planningError" role="status" hidden></p>
+      </details>
     </div>
 
     <div class="group">
@@ -533,6 +553,8 @@ td .sub{font-size:var(--f-xs);color:var(--ink-3)}
     <h2 class="hero-title" id="planTitle"></h2>
     <p class="shiftline" id="planShift"></p>
     <p class="muted sm" id="planSub"></p>
+    <p class="sm" id="constraintResult" role="status" hidden></p>
+    <p class="sm" id="dryResult" role="status" hidden></p>
     <details class="evidence" id="evidenceBox"><summary><svg class="i i--sm" aria-hidden="true"><use href="#i-alert"/></svg><span id="evidenceSum"></span><span class="more">Ayrıntı</span></summary><p id="evidenceNote" aria-live="polite"></p></details>
   </header>
   <div class="hero-grid">
@@ -557,7 +579,14 @@ td .sub{font-size:var(--f-xs);color:var(--ink-3)}
       </div>
     </div>
   </div>
-  <h3 class="alts-h">Diğer iki seçenek</h3>
+  <section class="card" id="singleChange" aria-labelledby="singleChangeTitle" hidden>
+    <div class="card__t">Mevcut planımla karşılaştırma</div>
+    <h3 id="singleChangeTitle"></h3>
+    <p class="sm" id="singleChangeBefore"></p>
+    <p class="sm" id="singleChangeAfter"></p>
+    <p class="sm muted" id="singleChangeMeasures"></p>
+  </section>
+  <h3 class="alts-h" id="alternativesTitle">Diğer iki seçenek</h3>
   <div class="grid3" id="plans"></div>
 </section>
 
@@ -659,6 +688,14 @@ td .sub{font-size:var(--f-xs);color:var(--ink-3)}
     </ul>
     <h3>Kanıt ve varsayımlar</h3>
     <p>Bu sürüm bir araştırma prototipidir. Çiftçi pilotu, uzman onayı ve ölçülmüş verim / tasarruf sonucu henüz yoktur.</p>
+    <details class="lab" id="fieldEvidence">
+      <summary>Yayımlanmış saha bulgularıyla karşılaştırma</summary>
+      <p>Konya su hesabı, Argis’in 2021–2025 NASA POWER kaydından hesaplanır. Deneme farklı yıllarda yapıldı. Ankara satırı, verim ölçümüyle Argis’in ürün geçişinde hangi sırayı tercih ettiğini karşılaştırır.</p>
+      <div class="scroll" tabindex="0" role="region" aria-label="Saha bulguları ve Argis sonuçları"><table>
+        <thead><tr><th>Karşılaştırma</th><th>Saha bulgusu</th><th>Argis hesabı</th><th>Kaynak</th></tr></thead>
+        <tbody id="fieldEvidenceRows"></tbody>
+      </table></div>
+    </details>
     <ul>
       <li><a href="https://www.fao.org/land-water/resources/tools/databases/ecocrop/en">FAO EcoCrop</a> genel ürün gereksinimleri referansıdır. Buradaki ürün eşikleri ve ekim takvimleri yaklaşık değerlerdir; her ürün için kaynak eşleştirmesi ve yerel doğrulama beklenmektedir.</li>
       <li>0,65 / 0,35 uygunluk ağırlıkları, münavebe bonus ve cezaları, 3–5 kg N/da azot katkısı ve depolanan su dönüşümü prototip varsayımlarıdır; kalibre edilmiş bilimsel katsayılar değildir.</li>
@@ -799,13 +836,18 @@ var FS = (function () {
   }
   function shiftClim(c, dT, dPpct) {
     var k = 1 + dPpct / 100;
-    return { T: c.T.map(function (v) { return v + dT; }), TX: c.TX.map(function (v) { return v + dT; }), TN: c.TN.map(function (v) { return v + dT; }), R: c.R.map(function (v) { return v * k; }), W: c.W.map(function (v) { return v == null ? null : Math.max(0, Math.min(1, v * (1 + (dPpct / 100) * 0.6) - dT * 0.01)); }), SW: c.SW, y0: c.y0, y1: c.y1 };
+    var shiftTemperature = function (v) { return v == null ? null : v + dT; };
+    return { T: c.T.map(shiftTemperature), TX: c.TX.map(shiftTemperature), TN: c.TN.map(shiftTemperature), R: c.R.map(function (v) { return v == null ? null : v * k; }), W: c.W.map(function (v) { return v == null ? null : Math.max(0, Math.min(1, v * (1 + (dPpct / 100) * 0.6) - dT * 0.01)); }), SW: c.SW, y0: c.y0, y1: c.y1 };
   }
 
   // Yıllık seriler ve eğilimler
   function annual(d) {
     var ys = d._years.filter(function (y) { return d.T2M[y] && d.T2M[y].every(function (v) { return v != null; }); });
-    var rain = ys.map(function (y) { return d.PRECTOTCORR[y].reduce(function (s, v, i) { return s + (v || 0) * MD[i]; }, 0); });
+    var rain = ys.map(function (y) {
+      var months = d.PRECTOTCORR && d.PRECTOTCORR[y];
+      if (!months || months.some(function (v) { return v == null; })) return null;
+      return months.reduce(function (s, v, i) { return s + v * MD[i]; }, 0);
+    });
     var temp = ys.map(function (y) { return mean(d.T2M[y]); });
     var wet = ys.map(function (y) { return d.GWETROOT && d.GWETROOT[y] ? mean(d.GWETROOT[y]) : null; });
     var hot = ys.map(function (y) { return d.T2M_MAX && d.T2M_MAX[y] ? d.T2M_MAX[y].filter(function (v) { return v != null && v >= 32; }).length : null; });
@@ -861,7 +903,8 @@ var FS = (function () {
     var upper = capped(function (k) { return f[k] == null ? 1 : f[k]; });
     var lim = known.sort(function (a, b) { return f[a] - f[b]; })[0];
     var irrUse = (irrigation && crop.irr !== 'no') ? Math.max(0, crop.wn - st.eff) : 0;
-    return { S: S, lower: lower, upper: upper, unknown: unknown, f: f, lim: f[lim] < 0.95 ? lim : null, st: st, irrUse: irrUse, needsIrr: needsIrr };
+    var waterKnown = !irrigation || crop.irr === 'no' || crop.m.every(function (m) { return c.R[m - 1] != null; });
+    return { S: S, lower: lower, upper: upper, unknown: unknown, f: f, lim: f[lim] < 0.95 ? lim : null, st: st, irrUse: irrUse, needsIrr: needsIrr, waterKnown: waterKnown };
   }
 
   var LIMFARM = {
@@ -905,6 +948,98 @@ var FS = (function () {
     lime: 'total lime (CaCO3) high for this crop'
   };
 
+  function parseMonth(value) {
+    var match = /^(\d{4})-(0[1-9]|1[0-2])$/.exec(value);
+    return match && +match[1] > 0 ? +match[1] * 12 + +match[2] - 1 : null;
+  }
+
+  function scheduleRotation(sequence, start) {
+    var firstHarvest = null, uncropped = 0, available = start;
+    var seasons = sequence.map(function (crop) {
+      if (crop.id === 'nadas') {
+        var fallow = { start: available, end: available + 11 };
+        available += 12;
+        uncropped += 12;
+        return fallow;
+      }
+      var wait = (crop.m[0] - 1 - available % 12 + 12) % 12;
+      var sow = available + wait, harvest = sow + crop.m.length - 1;
+      if (firstHarvest == null) firstHarvest = harvest;
+      available = harvest + 1;
+      uncropped += wait;
+      return { start: sow, end: harvest };
+    });
+    return { seasons: seasons, firstHarvest: firstHarvest, uncropped: uncropped };
+  }
+
+  function eligibleCrop(crop, opts) {
+    return crop.id === 'nadas' || (opts.suits[crop.id]?.S >= 30 && (opts.irrigation || crop.irr !== 'yes'));
+  }
+
+  function peakWater(sequence, suits) {
+    var values = sequence.filter(function (crop) { return crop.id !== 'nadas'; }).map(function (crop) { return suits[crop.id]; });
+    if (values.some(function (s) { return !s || s.waterKnown === false || !Number.isFinite(s.irrUse); })) return null;
+    return Math.max(0, ...values.map(function (s) { return s.irrUse; }));
+  }
+
+  function checkRotation(sequence, opts, calendar) {
+    var peak = opts.irrigation ? peakWater(sequence, opts.suits) : 0;
+    var unsuitable = sequence.filter(function (crop) { return !eligibleCrop(crop, opts); }).length;
+    var missesDeadline = opts.deadline != null && (calendar.firstHarvest == null || calendar.firstHarvest > opts.deadline);
+    var unknownWater = opts.quota != null && peak == null;
+    var exceedsQuota = opts.quota != null && peak != null && peak > opts.quota + 1e-9;
+    var noHarvest = calendar.firstHarvest == null;
+    return { peak: peak, unsuitable: unsuitable, noHarvest: noHarvest, missesDeadline: missesDeadline, unknownWater: unknownWater, exceedsQuota: exceedsQuota,
+      eligible: !unsuitable && !noHarvest && !missesDeadline && !unknownWater && !exceedsQuota };
+  }
+
+  function findSingleChange(sequence, locks, opts) {
+    var all = CROPS.concat([NADAS]);
+    var previous = all.find(function (crop) { return crop.id === opts.prev; });
+    function measure(seq) {
+      var calendar = scheduleRotation(seq, opts.start), check = checkRotation(seq, opts, calendar);
+      var repeats = seq.filter(function (crop, i) {
+        var before = i ? seq[i - 1] : previous;
+        return crop.id !== 'nadas' && before && crop.f === before.f;
+      }).length;
+      return { seq: seq, calendar: calendar, check: check, repeats: repeats };
+    }
+    function compare(a, b) {
+      var aPeak = a.check.peak ?? Infinity, bPeak = b.check.peak ?? Infinity;
+      return a.check.unsuitable - b.check.unsuitable || a.repeats - b.repeats ||
+        (opts.irrigation && aPeak !== bPeak ? aPeak - bPeak : 0) || a.calendar.uncropped - b.calendar.uncropped;
+    }
+    var current = measure(sequence), best = null;
+    var constrained = opts.quota != null || opts.deadline != null;
+    var currentFits = (!opts.next || sequence[0].id === opts.next) && (!constrained || current.check.eligible);
+    sequence.forEach(function (from, index) {
+      if (locks[index]) return;
+      all.forEach(function (crop) {
+        if (crop.id === from.id || !eligibleCrop(crop, opts)) return;
+        var candidate = sequence.slice();
+        candidate[index] = crop;
+        if (opts.next && candidate[0].id !== opts.next) return;
+        var result = measure(candidate);
+        if (result.check.noHarvest || (constrained && !result.check.eligible)) return;
+        if (currentFits && compare(result, current) >= 0) return;
+        if (!best || compare(result, best) < 0) best = { ...result, index: index };
+      });
+    });
+    return { current: current, best: best };
+  }
+
+  function driestCompleteYear(data) {
+    var annualData = annual(data);
+    var complete = annualData.years.map(function (year, i) {
+      return { year: year, rain: annualData.rain[i], climate: climatology(data, year, year) };
+    }).filter(function (entry) {
+      return entry.rain != null && ['TX', 'TN', 'W'].every(function (key) {
+        return entry.climate[key].every(function (v) { return v != null; });
+      });
+    }).sort(function (a, b) { return a.rain - b.rain; });
+    return complete.length > 1 && complete[0].rain < complete[complete.length - 1].rain ? complete[0] : null;
+  }
+
   // Rotasyon planlayıcı
   function plan(opts) {
     // opts: {suits:{id:result}, prev:id|null, years:3, irrigation, pri:{water,soil,income}, drought: 0..1, inc:{id:n}}
@@ -914,7 +1049,8 @@ var FS = (function () {
     // under 200 ms on a phone. Checked: same top-3 plans as the full search for all 4 regions x
     // dry/irrigated x 3 goals (docs/BENCHMARK.md). 2- and 3-year plans are never pruned.
     var LIMIT = 12000, N0 = opts.years || 3;
-    if (Math.pow(pool.length + 1, N0) > LIMIT) {
+    var constrained = opts.deadline != null || opts.quota != null;
+    if (!constrained && Math.pow(pool.length + 1, N0) > LIMIT) {
       var keep = Math.max(2, Math.floor(Math.pow(LIMIT, 1 / N0)) - 1);
       pool = pool.slice().sort(function (a, b) { return opts.suits[b.id].S - opts.suits[a.id].S; }).slice(0, keep);
     }
@@ -929,6 +1065,20 @@ var FS = (function () {
       pool.forEach(function (c) { cur.push(c); rec(cur); cur.pop(); });
     }
     rec([]);
+    var screen;
+    if (constrained) {
+      screen = { total: seqs.length, unsuitable: 0, deadline: 0, quota: 0, unknownWater: 0, earliest: null, minimum: null };
+      seqs = seqs.filter(function (seq) {
+        var calendar = scheduleRotation(seq, opts.start), check = checkRotation(seq, opts, calendar);
+        if (check.unsuitable || check.noHarvest) { screen.unsuitable++; return false; }
+        if (check.missesDeadline) screen.deadline++;
+        if (check.exceedsQuota) screen.quota++;
+        if (check.unknownWater) screen.unknownWater++;
+        if (!check.exceedsQuota && !check.unknownWater && calendar.firstHarvest != null && (screen.earliest == null || calendar.firstHarvest < screen.earliest)) screen.earliest = calendar.firstHarvest;
+        if (!check.missesDeadline && check.peak != null && (screen.minimum == null || check.peak < screen.minimum)) screen.minimum = check.peak;
+        return check.eligible;
+      });
+    }
     var prev = opts.prev && byId[opts.prev] ? byId[opts.prev] : null;
     var res = seqs.map(function (seq) {
       var notes = [], pts = 0;
@@ -996,7 +1146,7 @@ var FS = (function () {
       seen[k] = 1; out.push(res[i]);
     }
     for (var j = 0; j < res.length && out.length < 3; j++) if (out.indexOf(res[j]) < 0) out.push(res[j]);
-    return { top: out, count: res.length };
+    return { top: out, count: res.length, ...(screen ? { screen: screen } : {}) };
   }
 
   // MODIS NDVI listesi -> yıllık zirve
@@ -1165,7 +1315,7 @@ var FS = (function () {
     return out.sort((a, b) => a.d < b.d ? -1 : 1);
   }
 
-  return { CROPS: CROPS, NADAS: NADAS, SALT: SALT, LIME: LIME, mannKendall: mannKendall, spi: spi, patterns: patterns, waterYearRain: waterYearRain, normCdf: normCdf, normInv: normInv, gammaP: gammaP, applyDailyMeans: applyDailyMeans, ndviQA: ndviQA, trap: trap, ramp: ramp, seasonStats: seasonStats, POWER_PARAMS: POWER_PARAMS, MD: MD, parsePower: parsePower, climatology: climatology, shiftClim: shiftClim, annual: annual, suit: suit, plan: plan, LIMTXT: LIMTXT, LIMFARM: LIMFARM, GROUP: GROUP, FAMTR: FAMTR, LIMTXT_EN: LIMTXT_EN, LIMFARM_EN: LIMFARM_EN, GROUP_EN: GROUP_EN, FAMEN: FAMEN, setLang: setLang, ndviSummary: ndviSummary, synthPower: synthPower, mean: mean, slope: slope };
+  return { CROPS: CROPS, NADAS: NADAS, SALT: SALT, LIME: LIME, mannKendall: mannKendall, spi: spi, patterns: patterns, waterYearRain: waterYearRain, normCdf: normCdf, normInv: normInv, gammaP: gammaP, applyDailyMeans: applyDailyMeans, ndviQA: ndviQA, trap: trap, ramp: ramp, seasonStats: seasonStats, POWER_PARAMS: POWER_PARAMS, MD: MD, parsePower: parsePower, climatology: climatology, shiftClim: shiftClim, annual: annual, suit: suit, plan: plan, parseMonth: parseMonth, scheduleRotation: scheduleRotation, checkRotation: checkRotation, findSingleChange: findSingleChange, driestCompleteYear: driestCompleteYear, LIMTXT: LIMTXT, LIMFARM: LIMFARM, GROUP: GROUP, FAMTR: FAMTR, LIMTXT_EN: LIMTXT_EN, LIMFARM_EN: LIMFARM_EN, GROUP_EN: GROUP_EN, FAMEN: FAMEN, setLang: setLang, ndviSummary: ndviSummary, synthPower: synthPower, mean: mean, slope: slope };
 })();
 
 
@@ -1218,6 +1368,15 @@ const I18N = {
   "Alan (dekar)": "Area (decares)",
   "Üre fiyatı (₺/kg)": "Urea price (₺/kg)",
   "Toprak analiz raporum var": "I have a soil test report",
+  "Mevcut planımla karşılaştır": "Compare with my current plan",
+  "Mevcut planımla karşılaştırma": "Comparison with my current plan",
+  "Plan kısıtları ve kurak yıl": "Planning constraints and dry-year test",
+  "Plan başlangıcı": "Plan start",
+  "İlk hasat için son ay": "Latest month for the first harvest",
+  "YYYY-AA": "YYYY-MM",
+  "Sezonluk net sulama kotası (m³/da)": "Seasonal net irrigation quota (m³/da)",
+  "Kayıtlardaki en kurak tam yılı dene": "Test the driest complete year on record",
+  "Ayları yıl ve ay olarak gir. Başlangıç boşsa bu ay kullanılır. Kota bir ürün sezonu için kök bölgesine ulaşan sudur.": "Enter a year and month. If you leave the start blank, the plan starts this month. The quota is the water reaching the root zone in one crop season.",
   "İl Tarım ve Orman Müdürlüğü veya akredite laboratuvar raporundaki değerleri gir. Boş bıraktıkların hesaba girmez.": "Enter the values from a provincial agriculture directorate or accredited lab report. Fields you leave blank are not used.",
   "Kil (%)": "Clay (%)",
   "Kireç, CaCO₃ (%)": "Lime, CaCO₃ (%)",
@@ -1315,6 +1474,12 @@ const I18N = {
   "İklim örüntüsü:": "Climate pattern:",
   "6 iklim serisinde Mann-Kendall eğilim testi ve Sen eğimi; tarım yılı yağışından SPI-12 ile kurak / yağışlı yıllar. Geçmiş ölçümlerdir; plana doğrudan girmez, senaryo düğmelerinden etkilenmez.": "Mann-Kendall trend test and Sen's slope on 6 climate series; dry / wet years from farming-year rainfall with SPI-12. These are past measurements; they do not enter the plan directly and the scenario controls do not change them.",
   "Kanıt ve varsayımlar": "Evidence and assumptions",
+  "Yayımlanmış saha bulgularıyla karşılaştırma": "Comparison with published field studies",
+  "Konya su hesabı, Argis’in 2021–2025 NASA POWER kaydından hesaplanır. Deneme farklı yıllarda yapıldı. Ankara satırı, verim ölçümüyle Argis’in ürün geçişinde hangi sırayı tercih ettiğini karşılaştırır.": "The Konya water estimate uses the 2021–2025 NASA POWER record. The trial took place in different years. The Ankara row compares measured yields with the preceding crop preferred by the ARGIS model.",
+  "Saha bulguları ve Argis sonuçları": "Field study results and ARGIS estimates",
+  "Saha bulgusu": "Field study result",
+  "Argis hesabı": "ARGIS estimate",
+  "Kaynak": "Source",
   "Bu sürüm bir araştırma prototipidir. Çiftçi pilotu, uzman onayı ve ölçülmüş verim / tasarruf sonucu henüz yoktur.": "This version is a research prototype. There is no farmer pilot, expert sign-off or measured yield / savings result yet.",
   "genel ürün gereksinimleri referansıdır. Buradaki ürün eşikleri ve ekim takvimleri yaklaşık değerlerdir; her ürün için kaynak eşleştirmesi ve yerel doğrulama beklenmektedir.": "is the reference for general crop requirements. The crop thresholds and sowing calendars here are approximate; each crop still needs source matching and local validation.",
   "0,65 / 0,35 uygunluk ağırlıkları, münavebe bonus ve cezaları, 3–5 kg N/da azot katkısı ve depolanan su dönüşümü prototip varsayımlarıdır; kalibre edilmiş bilimsel katsayılar değildir.": "The 0.65 / 0.35 suitability weights, rotation bonuses and penalties, the 3–5 kg N/da nitrogen credit and the stored-water conversion are prototype assumptions, not calibrated scientific coefficients.",
@@ -1497,14 +1662,50 @@ $('geo').addEventListener('click', () => {
 ['lat', 'lon'].forEach(id => $(id).addEventListener('change', () => { const ll = [+$('lat').value, +$('lon').value]; marker.setLatLng(ll); map.panTo(ll); pressPreset(null); }));
 
 // ---------- Controls ----------
+const cropCatalog = FS.CROPS.concat([FS.NADAS]);
+const cycleNumbers = [1, 2, 3, 4];
+$('currentYears').innerHTML = cycleNumbers.map(i => `<div class="field" id="cycleField${i}">
+  <label for="cycle${i}" id="cycleLabel${i}"></label><select id="cycle${i}"></select>
+  <label class="keep-cycle"><input type="checkbox" id="keep${i}"><span id="keepLabel${i}"></span></label>
+</div>`).join('');
 function fillCropSelects() {
-  const opts = FS.CROPS.concat([FS.NADAS]).map(c => `<option value="${c.id}">${c.n}</option>`).join('');
+  const opts = cropCatalog.map(c => `<option value="${c.id}">${c.n}</option>`).join('');
   const pv = $('prev').value, nx = $('next').value;
   $('prev').innerHTML = `<option value="">${T('Bilmiyorum / yok', "Don't know / none")}</option>` + opts; $('prev').value = pv;
   $('next').innerHTML = `<option value="">${T('Sen öner', 'You suggest')}</option>` + opts; $('next').value = nx;
+  cycleNumbers.forEach(i => {
+    const select = $(`cycle${i}`), value = select.value;
+    select.innerHTML = `<option value="">${T('Ürün seç', 'Choose a crop')}</option>` + opts;
+    select.value = value;
+    $(`cycleLabel${i}`).textContent = T(`${i}. yıl`, `Year ${i}`);
+    $(`keepLabel${i}`).textContent = T('Bu ekimi koru', 'Keep this crop');
+    $(`keep${i}`).setAttribute('aria-label', T(`Bu ekimi koru (${i}. yıl)`, `Keep this crop (year ${i})`));
+  });
 }
 fillCropSelects();
 $('prev').value = 'bugday';
+const planningIds = ['startMonth', 'harvestDeadline', 'waterQuota'];
+const cycleIds = cycleNumbers.map(i => `cycle${i}`);
+const checkIds = ['replayDry', ...cycleNumbers.map(i => `keep${i}`)];
+function syncPlanningControls() {
+  cycleNumbers.forEach(i => {
+    $(`cycleField${i}`).hidden = i > +$('years').value;
+    $(`keep${i}`).disabled = !$(`cycle${i}`).value;
+  });
+  $('quotaField').hidden = !$('irr').checked;
+  $('waterQuota').disabled = !$('irr').checked;
+}
+function readPlanning() {
+  const currentMonth = new Intl.DateTimeFormat('sv-SE', { timeZone: 'Europe/Istanbul', year: 'numeric', month: '2-digit' }).format(new Date());
+  const start = FS.parseMonth($('startMonth').value || currentMonth);
+  const deadline = FS.parseMonth($('harvestDeadline').value);
+  const quotaField = $('waterQuota'), quota = !quotaField.disabled && quotaField.value !== '' ? quotaField.valueAsNumber : null;
+  const invalidMonth = planningIds.slice(0, 2).some(id => $(id).validity.badInput || ($(id).value && FS.parseMonth($(id).value) == null));
+  const error = invalidMonth ? T('Başlangıç ve hasat ayını YYYY-AA biçiminde gir.', 'Enter the start and harvest months in YYYY-MM format.') :
+    !quotaField.disabled && !quotaField.validity.valid ? T('Sulama kotasını sıfır veya daha büyük bir sayı olarak gir.', 'Enter an irrigation quota of zero or greater.') :
+    deadline != null && deadline < start ? T('İlk hasat için son ay başlangıçtan önce olamaz.', 'The latest first harvest month must be on or after the plan start.') : '';
+  return { start, deadline, quota, error };
+}
 const sl = () => { $('goalTag').textContent = S.goal ? T(`· hedef: ${GOALN[S.goal][0]}`, `· goal: ${GOALN[S.goal][1]}`) : T('· özel ayar', '· custom'); $('vW').textContent = $('pW').value; $('vS').textContent = $('pS').value; $('vI').textContent = $('pI').value; $('vT').textContent = '+' + (+$('dT').value).toFixed(1); $('vP').textContent = (+$('dP').value > 0 ? '+' : '') + $('dP').value; $('hot').checked = +$('dT').value >= 2 && +$('dP').value <= -20; };
 $('hot').addEventListener('change', () => {
   const on = $('hot').checked; $('dT').value = on ? 2 : 0; $('dP').value = on ? -20 : 0; sl();
@@ -1512,23 +1713,26 @@ $('hot').addEventListener('change', () => {
 });
 ['pW', 'pS', 'pI', 'dT', 'dP'].forEach(id => $(id).addEventListener('input', () => { setGoal(null); sl(); if (S.data) compute('slider'); }));
 document.querySelectorAll('.goal').forEach(b => b.addEventListener('click', () => { setGoal(b.dataset.goal); sl(); if (S.data) compute(); }));
-['prev', 'next', 'years', 'irr', 'kirac', 'soilType', 'ph', 'clay', 'lime', 'ec', 'area', 'urea', 'baseMode', 'nLo', 'nHi'].forEach(id => $(id).addEventListener('change', () => {
+['prev', 'next', 'years', 'irr', 'kirac', 'soilType', 'ph', 'clay', 'lime', 'ec', 'area', 'urea', 'baseMode', 'nLo', 'nHi', ...planningIds, ...cycleIds, ...checkIds].forEach(id => $(id).addEventListener('change', () => {
   if (id === 'lime' || id === 'ec') S.lab[id] = $(id).value === '' ? null : Math.max(0, +$(id).value);
   if (id === 'ph' || id === 'clay') { S.soil.ph = $('ph').value === '' ? null : +$('ph').value; S.soil.clay = $('clay').value === '' ? null : +$('clay').value; const o = $('soilType').querySelector('[value=ozel]'); o.hidden = false; $('soilType').value = 'ozel'; }
   if (id === 'soilType') applySoil();
+  if (cycleIds.includes(id) && !$(id).value) $(`keep${id.slice(-1)}`).checked = false;
   if (S.data) compute();
 }));
 setGoal('denge'); sl();
 
 // ---------- Undo and reset ----------
 // Every user-made change that alters the plan offers "Geri al"; "Varsayılanlara dön" appears when settings differ from the defaults.
-const CTRL_IDS = ['prev', 'next', 'years', 'soilType', 'area', 'urea', 'ph', 'clay', 'lime', 'ec', 'pW', 'pS', 'pI', 'dT', 'dP', 'baseMode', 'nLo', 'nHi'];
+const CTRL_IDS = ['prev', 'next', 'years', 'soilType', 'area', 'urea', 'ph', 'clay', 'lime', 'ec', 'pW', 'pS', 'pI', 'dT', 'dP', 'baseMode', 'nLo', 'nHi', ...cycleIds, ...planningIds];
 function snapshot() {
   return { v: Object.fromEntries(CTRL_IDS.map(id => [id, $(id).value])), irr: $('irr').checked, goal: S.goal,
+    checks: checkIds.map(id => $(id).checked),
     inc: { ...S.inc }, lab: { ...S.lab }, ozelHidden: $('soilType').querySelector('[value=ozel]').hidden };
 }
 function restore(sn) {
   CTRL_IDS.forEach(id => { $(id).value = sn.v[id]; });
+  checkIds.forEach((id, i) => { $(id).checked = sn.checks[i]; });
   $(sn.irr ? 'irr' : 'kirac').checked = true;
   S.goal = sn.goal; document.querySelectorAll('.goal').forEach(b => b.setAttribute('aria-pressed', b.dataset.goal === sn.goal));
   S.inc = { ...sn.inc }; S.lab = { ...sn.lab };
@@ -1541,6 +1745,7 @@ function atDefaults() {
   const a = snapshot(), d = DEFAULTS;
   const ids = CTRL_IDS.filter(id => !((id === 'ph' || id === 'clay') && a.v.soilType !== 'ozel'));
   return ids.every(id => a.v[id] === d.v[id]) && a.irr === d.irr && a.goal === d.goal
+    && a.checks.every((value, i) => value === d.checks[i])
     && JSON.stringify(a.inc) === JSON.stringify(d.inc) && a.lab.lime == null && a.lab.ec == null;
 }
 
@@ -1739,6 +1944,10 @@ renderThresholds();
 // ---------- Compute ----------
 const BANDS = ['planBand', 'sumBand', 'patternBand', 'shiftBand', 'suitBand', 'climBand', 'soilBand'];
 function compute(scroll) {
+  syncPlanningControls();
+  const planning = readPlanning();
+  $('planningError').textContent = planning.error;
+  $('planningError').hidden = !planning.error;
   const d = S.data, ys = d._years.filter(y => d.T2M[y] && d.T2M[y].every(v => v != null));
   const last = ys[ys.length - 1], first = ys[0];
   S.an = FS.annual(d);
@@ -1756,9 +1965,10 @@ function compute(scroll) {
   const pri = { water: $('pW').value / 100, soil: $('pS').value / 100, income: $('pI').value / 100 };
   const legume = S.goal ? GOALS[S.goal].legume : 0;
   const ndS = FS.ndviSummary(S.ndvi), ndviWeak = ndS.slope != null && ndS.slope < -0.01 ? 1 : 0;
-  const popt = { prev: $('prev').value || null, next: $('next').value || null, years: +$('years').value, irrigation: irr, pri, drought, inc: S.inc, legume, ndviWeak };
-  const P = FS.plan({ ...popt, suits: ss });
-  const Pb = FS.plan({ ...popt, suits: sb, next: null });
+  const popt = { prev: $('prev').value || null, next: $('next').value || null, years: +$('years').value, irrigation: irr, pri, drought, inc: S.inc, legume, ndviWeak,
+    start: planning.start, deadline: planning.deadline, quota: planning.quota };
+  const P = planning.error ? { top: [], count: 0 } : FS.plan({ ...popt, suits: ss });
+  const Pb = planning.error ? P : FS.plan({ ...popt, suits: sb });
   S.last = { P, ss, irr };
   $('skeleton').hidden = true;
   BANDS.forEach(id => { const el = $(id); if (el.hidden) { el.hidden = false; el.classList.add('enter'); } });
@@ -1768,16 +1978,22 @@ function compute(scroll) {
   $('evidenceNote').textContent = (S.demo ? T('Sentetik örnek; gerçek tarla ölçümü değildir. ', 'Synthetic example; not a real field measurement. ') : S.snap ? T(`${S.snap} tarihinde kaydedilmiş gerçek NASA verisi. Model önerisidir; sahada doğrulanmış sonuç değildir. `, `Real NASA data saved on ${S.snap}. This is a model suggestion, not a field-validated result. `) : T('Güncel NASA verisi. Model önerisidir; sahada doğrulanmış sonuç değildir. ', 'Current NASA data. This is a model suggestion, not a field-validated result. ')) +
     (missingSoil ? T('Toprak verisi eksik: sıralama yalnızca bilinen faktörlere dayanır. Puan aralığı, bilinmeyen faktörlerin en kötü/en iyi durumunu gösterir; güven aralığı değildir. ', 'Soil data missing: the ranking uses the known factors only. The score range shows the worst / best case for the unknown factors; it is not a confidence interval. ') : T('Toprak değerleri seçilen kaynağa veya kullanıcı girişine dayanır. ', 'Soil values come from the chosen source or your input. ')) +
     (limeTxt || ecTxt ? T(`Toprak analiz raporundan: ${[limeTxt, ecTxt].filter(Boolean).join(', ')}; ürün eşikleri yaklaşıktır. `, `From the soil test report: ${[limeTxt, ecTxt].filter(Boolean).join(', ')}; crop thresholds are approximate. `) : '') +
-    (irr ? T('Sulama ihtiyacının tamamen karşılanabildiği varsayılır; su kapasitesi ve sulama kayıpları hesaplanmaz. ', 'Irrigation needs are assumed to be fully met; water capacity and irrigation losses are not calculated. ') : '') +
+    (irr ? (planning.quota == null
+      ? T('Sulama ihtiyacının tamamen karşılanabildiği varsayılır. ', 'Irrigation needs are assumed to be fully met. ')
+      : T('Kota, modelin hesapladığı en yüksek sezonluk net sulamaya uygulanır. ', 'The quota applies to the highest modeled seasonal net irrigation need. ')) +
+      T('Sulama kayıpları hesaba katılmaz. ', 'Irrigation losses are excluded. ') : '') +
     T('Tasarruflar varsayımsal karşılaştırmadır; gerçekleşmiş kazanç değildir.', 'Savings are a hypothetical comparison, not realized gains.');
   $('labNote').textContent = limeTxt || ecTxt
     ? T(`Toprak analiz raporu: ${limeTxt || 'kireç girilmedi'} · ${ecTxt || 'EC girilmedi'}. Tuzluluk etkisi Maas–Hoffman / FAO 29 eşikleriyle, kireç etkisi hassas ürünler için prototip eşikle hesaplanır.`, `Soil test report: ${limeTxt || 'no lime value'} · ${ecTxt || 'no EC value'}. The salinity effect uses Maas–Hoffman / FAO 29 thresholds; the lime effect uses a prototype threshold for sensitive crops.`)
     : T('Kireç ve tuzluluk girilmedi; bu iki faktör hesaba katılmadı. Panelde “Toprak analiz raporum var” bölümünden eklenebilir.', 'Lime and salinity were not entered, so these two factors are not included. Add them under “I have a soil test report” in the panel.');
   renderTrans(ss);
-  renderPlans(P, ss, irr);
+  renderPlans(P, ss, irr, planning);
+  renderConstraints(P, planning);
+  const revised = renderSingleChange({ ...popt, suits: ss }, planning.error);
+  renderDryYear(d, soil, popt, P.top[0], revised);
   renderImpact(P, ss, irr);
   renderSummary(P, ss, irr, drought);
-  renderShiftLine(Pb, P, renderShift(Pb, P, sb, ss, irr), dT, dP);
+  renderShiftLine(Pb, P, renderShift(Pb, P, sb, ss, irr, Boolean(dT || dP)), dT, dP);
   renderPatterns();
   renderSuit(sb, sr, ss);
   renderClimate(first, last, drought);
@@ -1815,11 +2031,97 @@ const bdg = b => `<span class="st st--${b.k}">${b.t}</span>`;
 const grp = c => T(FS.GROUP, FS.GROUP_EN)[c.f] || c.f;
 const season = c => c.s === 'K' ? T('güzlük', 'winter') : c.s === 'Y' ? T('yazlık', 'spring') : T('dinlenme', 'rest');
 const seqTxt = p => p ? p.seq.map(c => c.n).join(' → ') : '–';
+const locales = { tr: 'tr-TR', en: 'en-US' };
+const monthFormatters = Object.fromEntries(LANGS.map(lang => [lang, new Intl.DateTimeFormat(locales[lang], { timeZone: 'UTC', month: 'long', year: 'numeric' })]));
+const waterFormatters = Object.fromEntries(LANGS.map(lang => [lang, new Intl.NumberFormat(locales[lang], { maximumFractionDigits: 1 })]));
+function monthLabel(month) {
+  const date = new Date(0);
+  date.setUTCFullYear(Math.floor(month / 12), month % 12, 1);
+  return monthFormatters[LANG].format(date);
+}
+const waterLabel = value => value == null ? T('veri eksik', 'missing data') : `${waterFormatters[LANG].format(value)} m³/da`;
+
+function renderConstraints(P, planning) {
+  const out = $('constraintResult'), parts = [];
+  if (planning.error) parts.push(planning.error);
+  if (P.screen) {
+    const { total, deadline, quota, unknownWater, earliest, minimum } = P.screen;
+    parts.push(T(`${total} adaydan ${P.count} plan kısıtlara uydu.`, `${P.count} of ${total} plans meet the constraints.`));
+    if (planning.deadline != null) parts.push(T(`İlk hasat en geç ${monthLabel(planning.deadline)}.`, `First harvest by ${monthLabel(planning.deadline)}.`));
+    if (planning.quota != null) parts.push(T(`Sezon kotası ${waterLabel(planning.quota)}.`, `Seasonal quota ${waterLabel(planning.quota)}.`));
+    if (!P.count) {
+      if (deadline) parts.push(T(`${deadline} aday ilk hasat ayını aştı.`, `Plans missing the harvest deadline: ${deadline}.`));
+      if (quota) parts.push(T(`${quota} aday kotayı aştı.`, `Plans exceeding the quota: ${quota}.`));
+      if (unknownWater) parts.push(T(`${unknownWater} aday için sulama verisi eksik.`, `Plans with missing irrigation data: ${unknownWater}.`));
+      if (planning.deadline != null && earliest != null) parts.push(T(`Diğer kısıtlarla en erken hasat ${monthLabel(earliest)}.`, `Earliest harvest under the other constraints: ${monthLabel(earliest)}.`));
+      if (planning.quota != null && minimum != null) {
+        const required = waterLabel(Math.ceil(minimum * 10) / 10);
+        parts.push(T(`Diğer kısıtlarla gereken en düşük kota ${required}.`, `Minimum quota under the other constraints: ${required}.`));
+      }
+      if (P.screen.unsuitable === total) parts.push(T('Seçilen ürünlerle hasat veren uygun aday bulunamadı.', 'No suitable plan gives a harvest with the selected crops.'));
+    }
+  }
+  out.textContent = parts.join(' ');
+  out.hidden = !parts.length;
+}
+
+function renderSingleChange(opts, error) {
+  const cycles = cycleNumbers.slice(0, opts.years);
+  const sequence = cycles.map(i => cropCatalog.find(c => c.id === $(`cycle${i}`).value));
+  const entered = sequence.filter(Boolean).length;
+  const locks = cycles.map(i => $(`keep${i}`).checked);
+  const remaining = cycles.length - entered;
+  $('currentHelp').textContent = entered && remaining ? T(`Karşılaştırma için ${remaining} yılın ürününü daha seç.`, `Choose crops for the remaining ${remaining} ${remaining === 1 ? 'year' : 'years'} to compare plans.`) :
+    T('Her yıl için bir ürün veya nadas seç. Korumak istediğin ekimleri işaretle.', 'Choose a crop or fallow for each year. Mark the crops you want to keep.');
+  const ready = entered === cycles.length && !error;
+  $('singleChange').hidden = !ready;
+  if (!ready) return null;
+  const { current, best } = FS.findSingleChange(sequence, locks, opts);
+  const from = best && sequence[best.index], to = best && best.seq[best.index];
+  $('singleChangeTitle').textContent = best ? T(`${best.index + 1}. yıl ${from.n} yerine ${to.n}`, `Year ${best.index + 1}: replace ${from.n} with ${to.n}`) :
+    locks.every(Boolean) ? T('Planındaki tüm ekimler korunuyor', 'All crops in your plan are locked') : T('Uygun bir tek değişiklik bulunamadı', 'No suitable single change found');
+  $('singleChangeBefore').textContent = `${T('Mevcut plan', 'Current plan')} · ${seqTxt(current)}`;
+  $('singleChangeAfter').hidden = !best;
+  if (best) {
+    const crops = best.seq.map((crop, i) => i === best.index ? `<strong>${crop.n}</strong>` : crop.n);
+    $('singleChangeAfter').innerHTML = `${T('Önerilen plan', 'Suggested plan')} · ${crops.join(' → ')}`;
+  }
+  const values = (label, get) => `${label} ${get(current)}${best ? ` → ${get(best)}` : ''}`;
+  const measures = [values(T('Uygunluk kontrolünü geçemeyen ürün', 'Unsuitable crops'), p => p.check.unsuitable),
+    values(T('Aynı aileye dönen geçiş', 'Repeated crop families'), p => p.repeats), values(T('Ana ürünsüz ay', 'Months without a main crop'), p => p.calendar.uncropped)];
+  if (opts.irrigation) measures.push(values(T('En yüksek sezonluk sulama', 'Peak seasonal irrigation'), p => waterLabel(p.check.peak)));
+  if (opts.deadline != null) measures.push(values(T('İlk hasat', 'First harvest'), p => p.calendar.firstHarvest == null ? T('yok', 'none') : monthLabel(p.calendar.firstHarvest)));
+  $('singleChangeMeasures').textContent = measures.join(' · ');
+  return best;
+}
+
+function renderDryYear(data, soil, opts, top, revised) {
+  const out = $('dryResult');
+  out.hidden = !$('replayDry').checked;
+  if (out.hidden) return;
+  if (!top && !revised) { out.textContent = T('Kurak yıl testi için önce uygun bir plan oluştur.', 'Create a suitable plan before testing a dry year.'); return; }
+  const dry = FS.driestCompleteYear(data);
+  if (!dry) { out.textContent = T('Kurak yıl testi için karşılaştırılabilir tam iklim yılı bulunamadı.', 'No comparable year with a complete climate record was available.'); return; }
+  const suits = Object.fromEntries(FS.CROPS.map(c => [c.id, FS.suit(c, dry.climate, soil, opts.irrigation)]));
+  const describe = (plan, label) => {
+    const check = FS.checkRotation(plan.seq, { ...opts, suits }, FS.scheduleRotation(plan.seq, opts.start));
+    if (check.eligible) return `${label} ${T('testten geçti', 'passed')}${opts.irrigation ? T(`, en yüksek sezonluk sulama ${waterLabel(check.peak)}`, `, peak seasonal irrigation ${waterLabel(check.peak)}`) : ''}.`;
+    const reasons = [];
+    if (check.unsuitable) reasons.push(T(`${check.unsuitable} ürün uygunluk kontrolünü geçemedi`, `unsuitable crops: ${check.unsuitable}`));
+    if (check.exceedsQuota) reasons.push(T(`sezon kotası aşıldı (${waterLabel(check.peak)})`, `seasonal quota exceeded (${waterLabel(check.peak)})`));
+    if (check.unknownWater) reasons.push(T('sulama verisi eksik', 'missing irrigation data'));
+    if (check.missesDeadline) reasons.push(T('ilk hasat gecikiyor', 'first harvest misses the deadline'));
+    if (check.noHarvest) reasons.push(T('hasat yok', 'no harvest'));
+    return `${label} · ${reasons.join(', ')}.`;
+  };
+  const label = S.demo ? T('Sentetik kurak yıl testi', 'Synthetic dry-year test') : T('Kurak yıl testi', 'Dry-year test');
+  out.textContent = [`${label} · ${dry.year} (${fmtN(dry.rain)} mm).`, top && describe(top, T('Önerilen münavebe', 'Suggested rotation')),
+    revised && describe(revised, T('Tek değişiklik önerisi', 'Suggested single change'))].filter(Boolean).join(' ');
+}
 
 function farmStates(drought) {
   const b = S.base, r = S.rec, a = S.an;
-  const sumR = c => c.R.reduce((t, v) => t + (v || 0), 0);
-  const rB = sumR(b), rR = sumR(r), rPct = rB ? (rR - rB) / rB * 100 : 0;
+  const rB = meanAnnualRain(b), rR = meanAnnualRain(r), rPct = rB > 0 && rR != null ? (rR - rB) / rB * 100 : null;
   const tavR = FS.mean([r.W[9], r.W[10]]), tavB = FS.mean([b.W[9], b.W[10]]);
   const tav = tavR == null ? null : tavR >= 0.45 ? { k: 'ok', t: T('Tavlı', 'Moist') } : tavR >= 0.30 ? { k: 'risk', t: T('Yarı kurak', 'Semi-dry') } : { k: 'no', t: T('Kuru', 'Dry') };
   const kavR = FS.mean([r.TX[4], r.TX[5]]), kavB = FS.mean([b.TX[4], b.TX[5]]);
@@ -1833,7 +2135,8 @@ function farmStates(drought) {
 function renderSummary(P, ss, irr, drought) {
   const f = farmStates(drought), out = [];
   const pct = Math.abs(Math.round(f.rPct));
-  const rainPh = Math.abs(f.rPct) < 5 ? T('Yağış değişmedi', 'Rainfall unchanged') : T(`Yağış %${pct} ${f.rPct < 0 ? 'azaldı' : 'arttı'}`, `Rainfall ${f.rPct < 0 ? 'down' : 'up'} ${pct}%`);
+  const rainPh = f.rPct == null ? T('Yağış değişimi hesaplanamadı', 'Rainfall change could not be calculated') :
+    Math.abs(f.rPct) < 5 ? T('Yağış değişmedi', 'Rainfall unchanged') : T(`Yağış %${pct} ${f.rPct < 0 ? 'azaldı' : 'arttı'}`, `Rainfall ${f.rPct < 0 ? 'down' : 'up'} ${pct}%`);
   const parts = [rainPh];
   if (f.summerD > 0.3) parts.push(T(`yaz sıcağı ${dec(f.summerD.toFixed(1))} °C arttı`, `summer heat up ${f.summerD.toFixed(1)} °C`));
   if (f.kav && f.kav.k !== 'ok') parts.push(T(`kavrulma riski ${f.kav.t.toLowerCase()}`, `heat risk ${f.kav.t.toLowerCase()}`));
@@ -1849,11 +2152,11 @@ function renderSummary(P, ss, irr, drought) {
   $('lead').innerHTML = out.join(' ');
 
   const card = (t, st, sub, raw, src, k) => `<div class="card"><div class="card__t">${t}</div><div class="state ${st ? st.k : ''}" data-k="${k}">${st ? st.t : '–'}</div><div class="sm muted">${sub}</div><div class="raw eng-only">${raw}</div><div class="card__src">${src}</div></div>`;
-  const rainSt = Math.abs(f.rPct) < 5 ? { k: 'ok', t: T('Değişmedi', 'Unchanged') } : f.rPct < 0 ? { k: f.rPct < -10 ? 'no' : 'risk', t: T(`%${pct} azaldı`, `Down ${pct}%`) } : { k: 'ok', t: T(`%${pct} arttı`, `Up ${pct}%`) };
+  const rainSt = f.rPct == null ? null : Math.abs(f.rPct) < 5 ? { k: 'ok', t: T('Değişmedi', 'Unchanged') } : f.rPct < 0 ? { k: f.rPct < -10 ? 'no' : 'risk', t: T(`%${pct} azaldı`, `Down ${pct}%`) } : { k: 'ok', t: T(`%${pct} arttı`, `Up ${pct}%`) };
   $('farmCards').innerHTML =
     card(T('Ekim zamanı toprak nemi', 'Soil moisture at sowing'), f.tav, T('Ekim–kasımda kök bölgesindeki su', 'Root-zone water in Oct–Nov'), `GWETROOT ${fmt(f.tavB, 2)} → ${fmt(f.tavR, 2)}`, 'NASA POWER', 'tav') +
     card(T('Parselin yeşillik gücü', 'Greenness of the parcel'), f.yes, f.nd.years.length ? T(`Son ${f.nd.years.length} yılın en gür hâli`, `Peak greenness over the last ${f.nd.years.length} years`) : T('Uydu verisi alınamadı', 'No satellite data'), f.nd.years.length ? `NDVI ${f.nd.years[0]}: ${fmt(f.nd.peak[0], 2)} → ${f.nd.years[f.nd.years.length - 1]}: ${fmt(f.last, 2)}` : '', 'NASA MODIS', 'yes') +
-    card(T('Yıllık yağış', 'Annual rainfall'), rainSt, T(`Yılda ortalama ${fmtN(f.rR)} mm`, `${fmtN(f.rR)} mm a year on average`), `PRECTOTCORR ${S.base.y0}–${S.base.y1}: ${fmt(f.rB)} → ${fmt(f.rR)} mm`, 'NASA POWER', 'rain') +
+    card(T('Yıllık yağış', 'Annual rainfall'), rainSt, f.rR == null ? T('Tam yıl verisi yok', 'No complete years') : T(`Tam yıllarda ortalama ${fmtN(f.rR)} mm`, `${fmtN(f.rR)} mm on average in complete years`), `PRECTOTCORR ${S.base.y0}–${S.base.y1}: ${fmt(f.rB)} → ${fmt(f.rR)} mm`, 'NASA POWER', 'rain') +
     card(T('Başakta kavrulma riski', 'Heat risk at grain fill'), f.kav, T('Mayıs–haziran sıcağı', 'May–June heat'), `T2M_MAX ${fmt(f.kavB, 1)} → ${fmt(f.kavR, 1)} °C`, 'NASA POWER', 'kav');
 }
 
@@ -1958,19 +2261,23 @@ function renderPatterns() {
 }
 
 // ---------- Shift ----------
-function renderShift(Pb, P, sb, ss, irr) {
+function renderShift(Pb, P, sb, ss, irr, scenarioActive) {
   const rank = { ok: 2, nil: 2, risk: 1, no: 0 }, worse = [], better = [];
   FS.CROPS.forEach(c => { const a = badge(c, sb[c.id], irr), b = badge(c, ss[c.id], irr); if (rank[b.k] < rank[a.k]) worse.push([c, a, b]); else if (rank[b.k] > rank[a.k]) better.push([c, a, b]); });
   const same = Pb.top[0] && P.top[0] && seqTxt(Pb.top[0]) === seqTxt(P.top[0]);
-  $('shiftEyebrow').textContent = T(`ARGIS · ${S.base.y0}–${S.base.y1} iklimi ile ${S.rec.y0}–${S.rec.y1} iklimi`, `ARGIS · ${S.base.y0}–${S.base.y1} climate vs ${S.rec.y0}–${S.rec.y1} climate`);
-  const harder = worse.length ? T(`; ${worse.length} ürün zorlaştı`, `; ${worse.length} ${worse.length === 1 ? 'crop' : 'crops'} got harder`) : '';
-  $('shiftTitle').textContent = same
-    ? T('İklim kaydı ama en iyi plan aynı kaldı', 'The climate shifted but the best plan stayed the same') + harder
-    : T('İklim kaydığı için plan değişti', 'The plan changed because the climate shifted') + harder;
+  $('shiftEyebrow').textContent = T(`ARGIS · ${S.base.y0}–${S.base.y1} iklimi ile ${S.rec.y0}–${S.rec.y1} iklimi`, `ARGIS · ${S.base.y0}–${S.base.y1} climate vs ${S.rec.y0}–${S.rec.y1} climate`)
+    + (scenarioActive ? T(' + seçilen senaryo', ' + selected scenario') : '');
+  const harder = worse.length ? T(`, ${worse.length} ürün zorlaştı`, `, ${worse.length} ${worse.length === 1 ? 'crop' : 'crops'} got harder`) : '';
+  const headline = !Pb.top[0] && !P.top[0] ? T('İki dönemde de uygun plan bulunamadı', 'No suitable plan in either period') :
+    !Pb.top[0] || !P.top[0] ? T('Dönemlerden birinde uygun plan bulunamadı', 'No suitable plan in one of the periods') :
+    same ? T('Önerilen plan aynı kaldı', 'The suggested plan stayed the same') : T('Önerilen plan değişti', 'The suggested plan changed');
+  $('shiftTitle').textContent = headline + harder;
+  const recentLabel = scenarioActive ? T('Son dönem iklimi ve seçilen senaryoyla öneriyoruz', 'Suggested with the recent climate and selected scenario') :
+    T('Bugünkü iklimle öneriyoruz', "With today's climate we suggest");
   const li = ([c, a, b]) => `<li><b>${c.n}</b>${bdg(a)}${ico('arrow')}${bdg(b)}</li>`;
   $('shiftCards').innerHTML =
     `<div class="card"><div class="card__t">${T(`${S.base.y0}–${S.base.y1} iklimiyle önerirdik`, `With the ${S.base.y0}–${S.base.y1} climate we would suggest`)}</div><div class="shift-seq">${seqTxt(Pb.top[0])}</div>
-       <div class="card__t" style="margin-top:var(--s3)">${T('Bugünkü iklimle öneriyoruz', "With today's climate we suggest")}</div><div class="shift-seq now">${seqTxt(P.top[0])}</div></div>` +
+       <div class="card__t" style="margin-top:var(--s3)">${recentLabel}</div><div class="shift-seq now">${seqTxt(P.top[0])}</div></div>` +
     `<div class="card"><div class="card__t down">${ico('down')} ${T('Zorlaşan ürünler', 'Crops that got harder')}</div>${worse.length ? `<ul class="chg">${worse.map(li).join('')}</ul>` : `<p class="sm muted">${T('Bu parselde zorlaşan ürün yok.', 'No crop got harder on this parcel.')}</p>`}</div>` +
     `<div class="card"><div class="card__t up">${ico('up')} ${T('Kolaylaşan ürünler', 'Crops that got easier')}</div>${better.length ? `<ul class="chg">${better.map(li).join('')}</ul>` : `<p class="sm muted">${T('Bu parselde kolaylaşan ürün yok.', 'No crop got easier on this parcel.')}</p>`}</div>`;
   return worse.map(([c]) => c.n);
@@ -2010,12 +2317,22 @@ const soilSrc = () => $('soilType').value === 'ozel' ? T('toprak analizi', 'soil
 const limLine = s => s.lim ? `${T('Sınırlayan', 'Limited by')}: ${T(...LIM_SRC[s.lim]).replace('{soil}', soilSrc())}` : T('İklim uygun · POWER T2M, PRECTOTCORR', 'Climate suits · POWER T2M, PRECTOTCORR');
 const noteLi = t => { const src = SRC_LABEL[noteSrc(t[1])]; return `<li>${t[0] > 0 ? ico('check', 'i i--sm pos') : t[0] < 0 ? ico('alert', 'i i--sm neg') : ico('minus', 'i i--sm neu')}<span class="pts eng-only ${t[0] > 0 ? 'pos' : t[0] < 0 ? 'neg' : 'neu'}">${t[0] > 0 ? '+' : ''}${String(t[0]).replace('-', '−')}</span><span>${t[1]}${src ? `<span class="tag">${T(...src)}</span>` : ''}</span></li>`; };
 const topNotes = (p, k) => p.notes.slice().sort((a, b) => Math.abs(b[0]) - Math.abs(a[0])).slice(0, k);
-function renderPlans(P, ss, irr) {
+function renderPlans(P, ss, irr, planning) {
   const n = +$('years').value;
-  if (!P.top.length) { $('planEyebrow').textContent = T(`${n} yıllık plan`, `${n}-year plan`); $('planTitle').textContent = T('Bu tarlaya uygun münavebe bulunamadı', 'No suitable rotation found for this field'); ['planSub', 'planYears', 'planWhy', 'plans'].forEach(id => $(id).innerHTML = ''); return; }
+  $('share').disabled = !P.top.length;
+  $('alternativesTitle').hidden = P.top.length < 2;
+  if (P.top.length > 1) $('alternativesTitle').textContent = P.top.length === 2 ? T('Diğer seçenek', 'Other option') : T('Diğer iki seçenek', 'Two other options');
+  if (!P.top.length) {
+    $('planEyebrow').textContent = T(`${n} yıllık plan`, `${n}-year plan`);
+    $('planTitle').textContent = planning.error ? T('Plan girdilerini kontrol et', 'Check the planning inputs') : T('Bu tarlaya uygun münavebe bulunamadı', 'No suitable rotation found for this field');
+    $('planTitle').removeAttribute('aria-label');
+    ['planSub', 'planYears', 'planWhy', 'plans'].forEach(id => $(id).textContent = '');
+    return;
+  }
   const top = P.top[0];
+  const calendar = $('startMonth').value || P.screen ? FS.scheduleRotation(top.seq, planning.start) : null;
   $('planEyebrow').textContent = T(`${n} yıllık münavebe planın`, `Your ${n}-year rotation plan`);
-  $('planTitle').innerHTML = top.seq.map(c => c.n.replace(/ \(.*\)/, '')).join('<span class="arr" aria-hidden="true">→</span><wbr>');  // <wbr>: long plans may wrap after an arrow
+  $('planTitle').innerHTML = top.seq.map(c => c.n.replace(/ \(.*\)/, '')).join('<span class="arr" aria-hidden="true">→</span><wbr>');
   $('planTitle').setAttribute('aria-label', seqTxt(top));
   $('planTitle').dataset.k = 'plan';
   const sub = [];
@@ -2024,7 +2341,11 @@ function renderPlans(P, ss, irr) {
   if (top.seq.some(c => ss[c.id] && ss[c.id].unknown.length)) sub.push(T('Eksik toprak verisiyle ön sıralama', 'Preliminary ranking with missing soil data'));
   sub.push(`<span class="eng-only">${T('plan puanı', 'plan score')} ${top.total.toFixed(0)} · ${T('ort. uygunluk', 'mean suitability')} ${top.base.toFixed(0)}/100${irr ? ` · ${T('sulama', 'irrigation')} ≈ ${Math.round(top.water)} mm` : ''}</span>`);
   $('planSub').innerHTML = sub.join(' · ');
-  $('planYears').innerHTML = top.seq.map((c, k) => `<li class="yr"><span class="yr__n">${T(`${k + 1}. yıl`, `Year ${k + 1}`)} · ${season(c)}</span><span class="yr__crop">${c.n}</span><span class="yr__grp">${grp(c)}</span>${c.id === 'nadas' ? '' : bdg(badge(c, ss[c.id], irr)) + `<span class="yr__src">${limLine(ss[c.id])}</span>`}<span class="raw eng-only">${T('uygunluk', 'suitability')} ${c.id === 'nadas' ? '–' : ss[c.id].S}</span></li>`).join('');
+  $('planYears').innerHTML = top.seq.map((c, k) => {
+    const cycle = calendar?.seasons[k];
+    const dates = cycle ? `<span class="yr__src">${monthLabel(cycle.start)} – ${monthLabel(cycle.end)}</span>` : '';
+    return `<li class="yr"><span class="yr__n">${T(`${k + 1}. yıl`, `Year ${k + 1}`)} · ${season(c)}</span><span class="yr__crop">${c.n}</span><span class="yr__grp">${grp(c)}</span>${dates}${c.id === 'nadas' ? '' : bdg(badge(c, ss[c.id], irr)) + `<span class="yr__src">${limLine(ss[c.id])}</span>`}<span class="raw eng-only">${T('uygunluk', 'suitability')} ${c.id === 'nadas' ? '–' : ss[c.id].S}</span></li>`;
+  }).join('');
   $('planWhy').innerHTML = topNotes(top, 5).map(noteLi).join('');
   $('plans').innerHTML = P.top.slice(1).map((p, i) => `<div class="card alt"><div class="card__t">${T(`${i + 2}. seçenek`, `Option ${i + 2}`)}<span class="eng-only"> · ${T('puan', 'score')} ${p.total.toFixed(0)}</span></div><div class="alt__seq">${seqTxt(p)}</div><ul class="why">${topNotes(p, 3).map(noteLi).join('')}</ul></div>`).join('');
 }
@@ -2067,9 +2388,10 @@ function renderTrans(ss) {
 
 // ---------- Share / print / CSV ----------
 $('share').addEventListener('click', async () => {
-  if (!S.last) return;
+  const top = S.last?.P.top[0];
+  if (!top) return;
   const title = T('ARGIS münavebe planı', 'ARGIS rotation plan');
-  const top = S.last.P.top[0], text = `${title} (${$('lat').value}, ${$('lon').value})\n${$('sumTitle').innerText}. ${$('lead').innerText}\n\nPlan: ${top.seq.map((c, i) => `${T(`${i + 1}. yıl`, `Year ${i + 1}`)} ${c.n}`).join(', ')}\n${T('Kaynak', 'Source')}: NASA POWER, MODIS, SoilGrids${S.demo ? T(' (örnek – sentetik veri)', ' (example – synthetic data)') : ''}`;
+  const text = `${title} (${$('lat').value}, ${$('lon').value})\n${$('sumTitle').innerText}. ${$('lead').innerText}\n\nPlan: ${top.seq.map((c, i) => `${T(`${i + 1}. yıl`, `Year ${i + 1}`)} ${c.n}`).join(', ')}\n${T('Kaynak', 'Source')}: NASA POWER, MODIS, SoilGrids${S.demo ? T(' (örnek – sentetik veri)', ' (example – synthetic data)') : ''}`;
   try { if (navigator.share) { await navigator.share({ title, text }); return; } await navigator.clipboard.writeText(text); toast(T('Plan kopyalandı; WhatsApp veya SMS’e yapıştırabilirsin', 'Plan copied; you can paste it into WhatsApp or a text message')); }
   catch (e) { if (e.name !== 'AbortError') toast(T('Paylaşılamadı: ', 'Could not share: ') + e.message, 'alert'); }
 });
@@ -2085,17 +2407,23 @@ $('csv').addEventListener('click', () => {
 });
 
 // ---------- Charts ----------
+function meanAnnualRain(period) {
+  const a = S.an;
+  return FS.mean(a.rain.filter((_, i) => a.years[i] >= period.y0 && a.years[i] <= period.y1));
+}
 function renderClimate(first, last, drought) {
   const a = S.an, b = S.base, r = S.rec;
-  const sumR = c => c.R.reduce((s, v) => s + (v || 0), 0);
-  const rB = sumR(b), rR = sumR(r), tB = FS.mean(b.T), tR = FS.mean(r.T), wB = FS.mean(b.W), wR = FS.mean(r.W);
+  const rB = meanAnnualRain(b), rR = meanAnnualRain(r), tB = FS.mean(b.T), tR = FS.mean(r.T), wB = FS.mean(b.W), wR = FS.mean(r.W);
+  const rainChange = rB > 0 && rR != null ? (rR - rB) / rB * 100 : null;
   const hotB = b.TX.filter(v => v >= 32).length, hotR = r.TX.filter(v => v >= 32).length;
   const nd = FS.ndviSummary(S.ndvi);
-  $('climTitle').textContent = `${first}–${last}: ${T('yağış', 'rainfall')} ${sign(rR - rB)}${fmt((rR - rB) / rB * 100)} %, ${T('sıcaklık', 'temperature')} ${sign(tR - tB)}${fmt(tR - tB, 1)} °C`;
+  const rainLabel = rainChange == null ? T('yağış değişimi hesaplanamadı', 'rainfall change could not be calculated') :
+    `${T('yağış', 'rainfall')} ${sign(rainChange)}${fmt(rainChange)} %`;
+  $('climTitle').textContent = `${first}–${last}: ${rainLabel}, ${T('sıcaklık', 'temperature')} ${sign(tR - tB)}${fmt(tR - tB, 1)} °C`;
   const cls = (v, good) => v === 0 ? '' : ((v > 0) === good ? 'up' : 'down');
   const card = (t, v, sub, c, k) => `<div class="card"><div class="card__t">${t}</div><div class="stat__v ${c || ''}" data-k="c-${k}">${v}</div><div class="stat__s">${sub}</div></div>`;
   $('cards').innerHTML =
-    card(T('Yıllık yağış', 'Annual rainfall'), `${fmtN(rR)} mm`, `${b.y0}–${b.y1}: ${fmtN(rB)} mm`, cls(rR - rB, true), 'r') +
+    card(T('Yıllık yağış (tam yıllar)', 'Annual rainfall (complete years)'), rR == null ? T('Eksik veri', 'Missing data') : `${fmtN(rR)} mm`, `${b.y0}–${b.y1}: ${rB == null ? T('eksik veri', 'missing data') : `${fmtN(rB)} mm`}`, rB == null || rR == null ? '' : cls(rR - rB, true), 'r') +
     card(T('Ortalama sıcaklık', 'Mean temperature'), `${fmt(tR, 1)} °C`, `${sign(tR - tB)}${fmt(tR - tB, 2)} °C · ${T('eğilim', 'trend')} ${sign(a.tempSlope)}${fmt(a.tempSlope * 10, 2)} °C/${T('10 yıl', '10 years')}`, cls(tR - tB, false), 't') +
     card(T('Kök bölgesi nemi', 'Root-zone moisture'), fmt(wR, 2), `${T('İlk dönem', 'First period')} ${fmt(wB, 2)} · ${T('eğilim', 'trend')} ${sign(a.wetSlope)}${fmt((a.wetSlope || 0) * 10, 3)}/${T('10 yıl', '10 years')}`, cls(wR - wB, true), 'w') +
     card(T('Sıcak ay (maks. ≥ 32 °C)', 'Hot months (max. ≥ 32 °C)'), T(`${hotR} ay`, `${hotR} months`), T(`İlk dönem ${hotB} ay`, `First period ${hotB} months`), cls(hotR - hotB, false), 'h') +
@@ -2138,15 +2466,17 @@ function nice(lo, hi) { const p = (hi - lo) * 0.08 || 1; return [lo - p, hi + p]
 function drawAnnual() {
   const s = svgOf('f1'), a = S.an; const draw = () => {
     const W = s.clientWidth, H = s.clientHeight, pad = { l: 44, r: 36, t: 48, b: 26 }, n = a.years.length; if (!n) return;
-    const rMax = Math.max(...a.rain) * 1.1, [tl, th] = nice(Math.min(...a.temp), Math.max(...a.temp));
+    const rMax = Math.max(1, ...a.rain) * 1.1, [tl, th] = nice(Math.min(...a.temp), Math.max(...a.temp));
     const x = i => pad.l + (W - pad.l - pad.r) * (i + .5) / n, bw = (W - pad.l - pad.r) / n * .7;
     const yr = v => H - pad.b - (H - pad.t - pad.b) * v / rMax, yt = v => H - pad.b - (H - pad.t - pad.b) * (v - tl) / (th - tl);
     let g = axisY(W, H, pad, 0, rMax, 4, v => Math.round(v)) + axisY(W, H, pad, tl, th, 4, v => v.toFixed(1), 'r');
-    a.rain.forEach((v, i) => g += `<rect x="${x(i) - bw / 2}" y="${yr(v)}" width="${bw}" height="${H - pad.b - yr(v)}" rx="1.5" fill="var(--rain)" opacity=".6"/>`);
+    a.rain.forEach((v, i) => {
+      if (v != null) g += `<rect x="${x(i) - bw / 2}" y="${yr(v)}" width="${bw}" height="${H - pad.b - yr(v)}" rx="1.5" fill="var(--rain)" opacity=".6"/>`;
+    });
     g += `<polyline fill="none" stroke="var(--heat)" stroke-width="2.25" stroke-linejoin="round" points="${a.temp.map((v, i) => x(i) + ',' + yt(v)).join(' ')}"/>`;
     const step = W < 520 ? 6 : 3; a.years.forEach((y, i) => { if (i % step === 0 || i === n - 1) g += TX(x(i), H - 8, y); });
     s.innerHTML = g + XH(pad, H);
-    hud(s, n, x, i => `<b>${a.years[i]}</b><br>${T('Yağış', 'Rain')} ${Math.round(a.rain[i])} mm<br>${T('Sıcaklık', 'Temperature')} ${fmt(a.temp[i], 1)} °C` + (a.wet[i] != null ? `<br>${T('Kök nemi', 'Root moisture')} ${fmt(a.wet[i], 2)}` : '')); }; bindDraw(s, draw);
+    hud(s, n, x, i => `<b>${a.years[i]}</b><br>${T('Yağış', 'Rain')} ${a.rain[i] == null ? T('verisi eksik', 'data missing') : `${Math.round(a.rain[i])} mm`}<br>${T('Sıcaklık', 'Temperature')} ${fmt(a.temp[i], 1)} °C` + (a.wet[i] != null ? `<br>${T('Kök nemi', 'Root moisture')} ${fmt(a.wet[i], 2)}` : '')); }; bindDraw(s, draw);
 }
 function drawMonthly() {
   const s = svgOf('f2'), b = S.base, r = S.rec; const draw = () => {
@@ -2186,6 +2516,44 @@ function drawNdvi() {
     i => { const y = +nd[i].d.slice(0, 4); return `<b>${nd[i].d}</b><br>NDVI ${fmt(nd[i].v, 3)}<br>${T(`${y} zirvesi`, `${y} peak`)} ${fmt(pk[y], 2)}`; });
 }
 
+function renderFieldEvidence() {
+  const snapshot = SNAP.konya;
+  if (!snapshot) {
+    $('fieldEvidenceRows').innerHTML = `<tr><td colspan="4">${T('Konya referans iklim kaydı bulunamadı.', 'The Konya reference climate record is unavailable.')}</td></tr>`;
+    return;
+  }
+  const power = FS.parsePower(snapPower(snapshot));
+  const climate = FS.climatology(power, 2021, 2025);
+  const chickpea = cropCatalog.find(c => c.id === 'nohut');
+  const season = FS.seasonStats(chickpea, climate);
+  const wheat = cropCatalog.find(c => c.id === 'bugday');
+  const suits = { bugday: FS.suit(wheat, climate, {}, false) };
+  const transition = prev => {
+    const [plan] = FS.plan({ prev, next: 'bugday', years: 1, suits, pri: { water: 0, soil: 0, income: 0 } }).top;
+    return plan.total - plan.base;
+  };
+  const chickpeaSource = `<a href="https://dergipark.org.tr/tr/pub/selcukjafsci/article/1276143">${T('Tarı ve Bahçeci (2022), tablolar 7–8', 'Tarı and Bahçeci (2022), tables 7–8')}</a>`;
+  const wheatSource = `<a href="https://www.sciencedirect.com/science/article/pii/S016719870800175X">${T('Çaycı ve ark. (2009), tablo 2', 'Çaycı et al. (2009), table 2')}</a>`;
+  const afterChickpea = transition('nohut'), afterWheat = transition('bugday');
+  const chickpeaWater = fmt(season.eff), netDeficit = fmt(Math.max(0, chickpea.wn - season.eff));
+  const rows = [
+    [T('Konya · Erken ekilen sulamasız nohutta sezon suyu', 'Konya · Seasonal water for early-sown rainfed chickpea'),
+      T('241 mm ölçülen tüketim', '241 mm measured water use'),
+      T(`${chickpeaWater} mm yağış ve topraktan gelen tahmini su`, `${chickpeaWater} mm estimated water from rain and soil`), chickpeaSource],
+    [T('Konya · Erken ekilen nohutta tam sulama', 'Konya · Full irrigation for early-sown chickpea'),
+      T('333 mm uygulanan su', '333 mm water applied'),
+      T(`${netDeficit} mm modellenen net su açığı`, `${netDeficit} mm modeled net water deficit`), chickpeaSource],
+    [T('Haymana, Ankara · Nohut veya buğday sonrası buğday', 'Haymana, Ankara · Wheat after chickpea or wheat'),
+      T(`Nohut sonrası ${fmtN(1943)} kg/ha, buğday sonrası 543 kg/ha`, `${fmtN(1943)} kg/ha after chickpea, 543 kg/ha after wheat`),
+      T(`Nohut sonrası ${sign(afterChickpea)}${fmt(afterChickpea)}, buğday sonrası ${fmt(afterWheat)} geçiş puanı`,
+        `Transition score: ${sign(afterChickpea)}${fmt(afterChickpea)} after chickpea, ${fmt(afterWheat)} after wheat`), wheatSource],
+  ];
+  $('fieldEvidenceRows').innerHTML = rows.map(row => `<tr>${row.map(cell => `<td>${cell}</td>`).join('')}</tr>`).join('');
+}
+$('fieldEvidence').addEventListener('toggle', () => {
+  if ($('fieldEvidence').open && !$('fieldEvidenceRows').children.length) renderFieldEvidence();
+});
+
 // First paint: draw the saved Konya plan straight away (no artificial delay). The synthetic
 // example is only a fallback if the saved data is missing.
 // ---------- Language switch ----------
@@ -2198,6 +2566,7 @@ function setLang(l, redraw) {
   translateDom();
   if (!redraw) return;
   fillCropSelects(); renderThresholds(); soilAutoLabel(); sl(); setLayers();
+  if ($('fieldEvidenceRows').children.length) renderFieldEvidence();
   if (!busy) { $('go').innerHTML = goLabel(); $('geo').innerHTML = geoLabel(); }
   if (parcelAt && !$('parcel').hidden) lookupParcel(...parcelAt);
   Object.entries(textFns).forEach(([id, fn]) => { $(id).textContent = fn(); });

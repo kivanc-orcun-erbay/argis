@@ -38,11 +38,78 @@ test('warmer-and-drier toggle recomputes for +2 °C / -20 % and can be undone', 
   await expect(page.locator('#dT')).toHaveValue('2');
   await expect(page.locator('#dP')).toHaveValue('-20');
   await expect(page.locator('#planShift')).toContainText('+2 °C');
+  await expect(page.locator('#shiftCards')).toContainText('Son dönem iklimi ve seçilen senaryoyla');
   // Either the scenario message, or (if the plan changed) the undo message.
   await expect(page.locator('#toast')).toContainText(/\+2 °C|Plan değişti/);
   await page.locator('label[for="hot"]').click();
   await expect(page.locator('#dT')).toHaveValue('0');
   await expect(page.locator('#planShift')).not.toContainText('senaryosuyla');
+});
+
+test('a fixed first crop applies to both climate periods', async ({ page }) => {
+  await page.locator('#vEng').click();
+  await page.selectOption('#next', 'bugday');
+  await expect(plan(page)).toHaveAttribute('aria-label', /^Buğday →/);
+  const sequences = page.locator('#shiftCards .shift-seq');
+  await expect(sequences).toHaveText([/^Buğday →/, /^Buğday →/]);
+});
+
+test('a grower compares their own plan and can keep any selected cycle', async ({ page }) => {
+  await page.locator('#currentPlan summary').click();
+  await page.selectOption('#cycle1', 'bugday');
+  await page.selectOption('#cycle2', 'nadas');
+  await expect(page.locator('#currentHelp')).toContainText('1 yılın ürününü daha seç');
+  await expect(page.locator('#singleChange')).toBeHidden();
+  await page.selectOption('#cycle3', 'bugday');
+  await expect(page.locator('#singleChangeTitle')).toHaveText(/^1\. yıl Buğday yerine/);
+  await page.check('#keep1');
+  await expect(page.locator('#singleChangeTitle')).toHaveText(/^2\. yıl Nadas yerine/);
+  await expect(page.locator('#singleChangeAfter')).toHaveText(/^Önerilen plan · Buğday → .* → Buğday$/);
+  await page.check('#keep2');
+  await page.check('#keep3');
+  await expect(page.locator('#singleChangeTitle')).toHaveText('Planındaki tüm ekimler korunuyor');
+  await expect(page.locator('#singleChangeAfter')).toBeHidden();
+  await page.locator('#reset').click();
+  await expect(page.locator('#cycle1')).toHaveValue('');
+  await expect(page.locator('#keep1')).not.toBeChecked();
+  await expect(page.locator('#singleChange')).toBeHidden();
+});
+
+test('season quota and first harvest deadline can eliminate plans and dry replay checks the result', async ({ page }) => {
+  await page.locator('#vEng').click();
+  await page.locator('#planningBox summary').click();
+  await expect(page.locator('#waterQuota')).toBeHidden();
+  await page.check('#irr');
+  await page.selectOption('#next', 'misir');
+  await page.fill('#startMonth', '2026-12');
+  await page.fill('#harvestDeadline', '2027-07');
+  await expect(page.locator('#constraintResult')).toContainText('en erken hasat Eylül 2027');
+  await expect(page.locator('#share')).toBeDisabled();
+  await page.fill('#harvestDeadline', '2027-12');
+  await expect(page.locator('#planYears .yr').first()).toContainText('Nisan 2027 – Eylül 2027');
+  await page.fill('#waterQuota', '0');
+  await page.locator('#waterQuota').press('Tab');
+  await expect(page.locator('#constraintResult')).toContainText('gereken en düşük kota 459,9 m³/da');
+  await expect(plan(page)).toHaveText('Bu tarlaya uygun münavebe bulunamadı');
+  await page.fill('#waterQuota', '459.9');
+  await page.locator('#waterQuota').press('Tab');
+  await expect(plan(page)).toHaveAttribute('aria-label', /^Mısır/);
+  await page.check('#replayDry');
+  await expect(page.locator('#dryResult')).toContainText('2013 (332 mm)');
+  await page.fill('#harvestDeadline', '2026-11');
+  await expect(page.locator('#planningError')).toContainText('başlangıçtan önce olamaz');
+});
+
+test('engineer evidence compares published field outcomes with the Argis model', async ({ page }) => {
+  await page.locator('#vEng').click();
+  await page.locator('#fieldEvidence summary').click();
+  const rows = page.locator('#fieldEvidenceRows tr');
+  await expect(rows).toHaveCount(3);
+  await expect(rows.nth(0)).toContainText('241 mm ölçülen tüketim');
+  await expect(rows.nth(0)).toContainText('264 mm yağış ve topraktan');
+  await expect(rows.nth(1)).toContainText('86 mm modellenen net su açığı');
+  await expect(rows.nth(2)).toContainText('Haymana, Ankara');
+  await expect(rows.nth(2).locator('a')).toHaveAttribute('href', /S016719870800175X/);
 });
 
 test('soil-test salinity lowers salt-sensitive crops and is credited to the lab report', async ({ page }) => {

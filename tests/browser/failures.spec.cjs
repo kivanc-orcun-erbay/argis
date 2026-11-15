@@ -25,6 +25,19 @@ test('all services answer: plan from live data, every source marked ok', async (
   await expect(page.locator('#evidenceNote')).toContainText('Güncel NASA verisi');
 });
 
+test('the annual chart skips a year with missing rainfall and still plots temperature', async ({ page }) => {
+  await open(page, { missingRainMonth: '202501' });
+  await page.locator('#vEng').click();
+  const annualChart = page.locator('#f1 svg');
+  const rainBars = annualChart.locator('rect');
+  await expect(rainBars).toHaveCount(25);
+  const temperature = await annualChart.locator('polyline').getAttribute('points');
+  await goAt(page);
+  await expect(status(page)).toContainText('Plan hazır; güncel NASA verisiyle.');
+  await expect(rainBars).toHaveCount(24);
+  await expect(annualChart.locator('polyline')).toHaveAttribute('points', temperature);
+});
+
 test('while loading: busy button, per-source progress, old results dimmed', async ({ page }) => {
   await open(page, { power: 1500 });
   await goAt(page);

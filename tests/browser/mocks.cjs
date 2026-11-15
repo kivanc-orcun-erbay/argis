@@ -7,9 +7,10 @@ const RAW = path.join(__dirname, '..', '..', 'data', 'raw');
 const load = name => JSON.parse(fs.readFileSync(path.join(RAW, name + '.json'), 'utf8'));
 const ym = (y0, i) => `${y0 + Math.floor(i / 12)}${String(i % 12 + 1).padStart(2, '0')}`;
 
-function powerMonthly(region) {
+function powerMonthly(region, missingRainMonth) {
   const pw = load(`${region}_power`), parameter = {};
   for (const [k, arr] of Object.entries(pw.p)) { parameter[k] = {}; arr.forEach((v, i) => { parameter[k][ym(pw.y0, i)] = v == null ? -999 : v; }); }
+  if (missingRainMonth) parameter.PRECTOTCORR[missingRainMonth] = -999;
   return { type: 'Feature', properties: { parameter } };
 }
 // Daily highs/lows whose monthly mean equals the saved (already daily-averaged) values.
@@ -56,7 +57,7 @@ async function mockServices(page, opts = {}) {
 
   await page.route('https://power.larc.nasa.gov/**', route => {
     const daily = route.request().url().includes('/temporal/daily/');
-    return daily ? answer(route, 'daily', powerDaily(region)) : answer(route, 'power', powerMonthly(region));
+    return daily ? answer(route, 'daily', powerDaily(region)) : answer(route, 'power', powerMonthly(region, opts.missingRainMonth));
   });
   await page.route('https://rest.isric.org/**', route => answer(route, 'soil', soilgrids(region)));
   await page.route('https://modis.ornl.gov/**', route => {
