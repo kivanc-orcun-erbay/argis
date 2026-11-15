@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Argis — NASA iklim verisiyle münavebe planı</title>
+<title>ARGIS — NASA iklim verisiyle münavebe planı</title>
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -377,7 +377,7 @@ td .sub{font-size:var(--f-xs);color:var(--ink-3)}
 
 <header class="hdr">
   <div>
-    <h1>Argis</h1>
+    <h1>ARGIS</h1>
     <p>Tarlana göre münavebe planı · 25 yıllık NASA iklim ve uydu verisiyle</p>
   </div>
   <div class="hdr-ctl">
@@ -1940,7 +1940,7 @@ function renderShift(Pb, P, sb, ss, irr) {
   const rank = { ok: 2, nil: 2, risk: 1, no: 0 }, worse = [], better = [];
   FS.CROPS.forEach(c => { const a = badge(c, sb[c.id], irr), b = badge(c, ss[c.id], irr); if (rank[b.k] < rank[a.k]) worse.push([c, a, b]); else if (rank[b.k] > rank[a.k]) better.push([c, a, b]); });
   const same = Pb.top[0] && P.top[0] && seqTxt(Pb.top[0]) === seqTxt(P.top[0]);
-  $('shiftEyebrow').textContent = T(`Argis · ${S.base.y0}–${S.base.y1} iklimi ile ${S.rec.y0}–${S.rec.y1} iklimi`, `Argis · ${S.base.y0}–${S.base.y1} climate vs ${S.rec.y0}–${S.rec.y1} climate`);
+  $('shiftEyebrow').textContent = T(`ARGIS · ${S.base.y0}–${S.base.y1} iklimi ile ${S.rec.y0}–${S.rec.y1} iklimi`, `ARGIS · ${S.base.y0}–${S.base.y1} climate vs ${S.rec.y0}–${S.rec.y1} climate`);
   const harder = worse.length ? T(`; ${worse.length} ürün zorlaştı`, `; ${worse.length} ${worse.length === 1 ? 'crop' : 'crops'} got harder`) : '';
   $('shiftTitle').textContent = same
     ? T('İklim kaydı ama en iyi plan aynı kaldı', 'The climate shifted but the best plan stayed the same') + harder
@@ -2046,7 +2046,7 @@ function renderTrans(ss) {
 // ---------- Share / print / CSV ----------
 $('share').addEventListener('click', async () => {
   if (!S.last) return;
-  const title = T('Argis münavebe planı', 'Argis rotation plan');
+  const title = T('ARGIS münavebe planı', 'ARGIS rotation plan');
   const top = S.last.P.top[0], text = `${title} (${$('lat').value}, ${$('lon').value})\n${$('sumTitle').innerText}. ${$('lead').innerText}\n\nPlan: ${top.seq.map((c, i) => `${T(`${i + 1}. yıl`, `Year ${i + 1}`)} ${c.n}`).join(', ')}\n${T('Kaynak', 'Source')}: NASA POWER, MODIS, SoilGrids${S.demo ? T(' (örnek – sentetik veri)', ' (example – synthetic data)') : ''}`;
   try { if (navigator.share) { await navigator.share({ title, text }); return; } await navigator.clipboard.writeText(text); toast(T('Plan kopyalandı; WhatsApp veya SMS’e yapıştırabilirsin', 'Plan copied; you can paste it into WhatsApp or a text message')); }
   catch (e) { if (e.name !== 'AbortError') toast(T('Paylaşılamadı: ', 'Could not share: ') + e.message, 'alert'); }
@@ -2170,7 +2170,7 @@ function drawNdvi() {
 function setLang(l, redraw) {
   LANG = l; FS.setLang(l);
   document.documentElement.lang = l;
-  document.title = T('Argis — NASA iklim verisiyle münavebe planı', 'Argis — crop rotation plans from NASA climate data');
+  document.title = T('ARGIS — NASA iklim verisiyle münavebe planı', 'ARGIS — crop rotation plans from NASA climate data');
   $('lTr').setAttribute('aria-pressed', l === 'tr'); $('lEn').setAttribute('aria-pressed', l === 'en');
   try { localStorage.setItem('fs-lang', l); } catch (e) {}
   translateDom();
