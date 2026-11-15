@@ -217,3 +217,23 @@ test('waterYearRain: October-September totals', () => {
   let tot = 0; for (let m = 9; m < 12; m++) tot += P[y - 1][m] * F.MD[m]; for (let m = 0; m < 9; m++) tot += P[y][m] * F.MD[m];
   near(wy[0][1], tot, 1e-9);
 });
+
+test('setLang: English crop names and reasons, same plan, and back to Turkish', () => {
+  const c = synthClim(), suits = {};
+  F.CROPS.forEach(x => { suits[x.id] = F.suit(x, c, SOIL, false); });
+  const run = () => F.plan({ suits, prev: 'bugday', years: 3 }).top[0];
+  const tr = run();
+  try {
+    F.setLang('en');
+    const en = run();
+    assert.equal(crop('bugday').n, 'Wheat');
+    assert.equal(F.NADAS.n, 'Fallow');
+    assert.deepEqual(en.seq.map(x => x.id), tr.seq.map(x => x.id), 'language must not change the plan');
+    assert.equal(en.total, tr.total);
+    en.notes.forEach(n => assert.doesNotMatch(n[1], /[ğışçöüİŞÇÖÜĞ]/, n[1]));
+    assert.ok(F.CROPS.every(x => x.en && F.GROUP_EN[x.f] && F.FAMEN[x.f]));
+    Object.keys(F.LIMFARM).forEach(k => { assert.ok(F.LIMFARM_EN[k]); assert.ok(F.LIMTXT_EN[k]); });
+  } finally { F.setLang('tr'); }
+  assert.equal(crop('bugday').n, 'Buğday');
+  assert.deepEqual(run().notes, tr.notes);
+});

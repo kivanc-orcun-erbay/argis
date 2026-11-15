@@ -12,6 +12,8 @@ NASA iklim verileriyle açıklanabilir münavebe planı üreten araştırma prot
 
 `index.html` dosyasıyla açılır. Canlı veri ve harita servisleri internet gerektirir. Hazır dört bölge (Konya, Çukurova, Harran, Trakya) sayfaya gömülü gerçek NASA verisiyle açılır; sentetik örnek ayrı bir bağlantıdadır.
 
+Sayfa Türkçe ve İngilizcedir: sağ üstteki **TR / EN** düğmesiyle dil değişir ve seçim hatırlanır. `?lang=en` ile doğrudan İngilizce açılır (ör. https://argis-mu.vercel.app/?lang=en).
+
 ## Kontrol
 
 ```sh

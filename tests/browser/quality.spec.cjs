@@ -8,7 +8,9 @@ const ready = async page => {
   await page.goto('/index.html');
   await expect(page.locator('#planTitle')).toHaveAttribute('aria-label', /→/);
 };
-const noSideScroll = page => page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth);
+// Compared with the set width: on a phone the browser widens the layout viewport to fit wide content,
+// so scrollWidth <= innerWidth would pass even when the page overflows.
+const noSideScroll = page => page.evaluate(() => document.documentElement.scrollWidth <= 375);
 
 test.describe('phone (375 px)', () => {
   test.use({ viewport: { width: 375, height: 812 }, isMobile: true, hasTouch: true });
