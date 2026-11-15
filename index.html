@@ -314,6 +314,9 @@ td .sub{font-size:var(--f-xs);color:var(--ink-3)}
 .panel-links{display:flex;justify-content:center;flex-wrap:wrap;gap:var(--s2) var(--s4)}
 .evidence{font-size:var(--f-sm);color:var(--ink-3)}
 .checklink{margin-top:var(--s2)}
+#recipeT tr.total td{font-weight:700;border-top:1px solid var(--line-strong)}
+#recipeT .sub{font-size:var(--f-xs);color:var(--ink-3)}
+#inputsBox{margin-top:var(--s4)}
 .checks{list-style:none;padding:0;margin:0;display:grid;grid-template-columns:repeat(auto-fill,minmax(min(100%,300px),1fr));gap:var(--s3)}
 .checks li{display:grid;grid-template-columns:1fr auto;gap:var(--s2) var(--s3);align-items:start;padding:var(--s3) var(--s4);background:var(--surface);border:1px solid var(--line);border-radius:var(--r-md)}
 .checks li .sm{grid-column:1/-1;color:var(--ink-2)}
@@ -479,6 +482,15 @@ td .sub{font-size:var(--f-xs);color:var(--ink-3)}
         <div class="field"><label for="area">Alan (dekar)</label><input type="number" id="area" min="1" step="1" value="20"></div>
         <div class="field"><label for="urea">Üre fiyatı (₺/kg)</label><input type="number" id="urea" min="0" step="0.5" placeholder="İsteğe bağlı"></div>
       </div>
+      <details class="lab" id="costBox">
+        <summary>Girdi fiyatlarım (reçete)</summary>
+        <p class="xs muted">Fiyatları gir; ARGIS plandaki her yıl için tohum, gübre ve mazot miktarını ve maliyetini hesaplar. Gübre fiyatı yukarıdaki “Üre fiyatı” kutusundan alınır.</p>
+        <div class="row">
+          <div class="field"><label for="fuel">Mazot (motorin) fiyatı (₺/L)</label><input type="number" id="fuel" min="0" step="0.5" placeholder="İsteğe bağlı"></div>
+        </div>
+        <p class="xs muted">Plandaki ürünlerin tohum fiyatı:</p>
+        <div class="row" id="seedPrices"></div>
+      </details>
       <details class="lab" id="labBox">
         <summary>Toprak analiz raporum var</summary>
         <p class="xs muted">İl Tarım ve Orman Müdürlüğü veya akredite laboratuvar raporundaki değerleri gir. Boş bıraktıkların hesaba girmez.</p>
@@ -594,6 +606,22 @@ td .sub{font-size:var(--f-xs);color:var(--ink-3)}
   </section>
   <h3 class="alts-h" id="alternativesTitle">Diğer iki seçenek</h3>
   <div class="grid3" id="plans"></div>
+</section>
+
+<section class="band" id="recipeBand" hidden>
+  <header>
+    <p class="eyebrow">Girdi reçetesi</p>
+    <h2 id="recipeTitle"></h2>
+    <p class="lead" id="recipeLead"></p>
+  </header>
+  <div class="scroll" tabindex="0" role="region" aria-label="Girdi reçetesi tablosu">
+    <table class="stack" id="recipeT"><thead><tr><th>Yıl</th><th>Ürün</th><th class="n">Tohum</th><th class="n">Azot (N)</th><th class="n">Üre</th><th class="n">Mazot</th><th class="n">Maliyet (₺/da)</th><th class="n">Tarlanın tamamı (₺)</th></tr></thead><tbody></tbody></table>
+  </div>
+  <p class="foot">Miktarlar yaklaşık tipik değerlerdir (prototip); il tarım müdürlüğü, tohum bayisi ya da toprak analizi önerisine göre değişir. Bakliyattan sonraki ürünün azot ihtiyacından “Azot kredisi” aralığının ortası düşülür. Fosfor ve potas, sulama pompası yakıtı, ilaç ve işçilik dahil değildir.</p>
+  <details class="lab eng-only" id="inputsBox">
+    <summary>Varsayılan miktarlar (tüm ürünler)</summary>
+    <div class="scroll" tabindex="0" role="region" aria-label="Varsayılan girdi miktarları tablosu"><table id="inputsT"><thead><tr><th>Ürün</th><th class="n">Tohum / da</th><th class="n">Azot, kıraç (kg N/da)</th><th class="n">Azot, sulu (kg N/da)</th><th class="n">Mazot (L/da)</th></tr></thead><tbody></tbody></table></div>
+  </details>
 </section>
 
 <section class="band" id="sumBand" hidden>
@@ -1327,6 +1355,50 @@ var FS = (function () {
     return out.sort((a, b) => a.d < b.d ? -1 : 1);
   }
 
+  // ---------- Input recipe: seed, fertilizer and diesel for each year of a plan ----------
+  // Typical amounts per decare for common practice in Turkey. PROTOTYPE values, not validated one by
+  // one: shown on the page and to be checked against the provincial agriculture directorate, the
+  // seed dealer or a soil test. seed: sowing rate (unit 'kg', or 'unit' for sugar beet seed sold
+  // in 100,000-seed units); n: nitrogen need, kg N/da [rainfed, irrigated]; fuel: diesel, L/da for
+  // tillage, sowing, care and harvest (irrigation pumping not included).
+  var INPUTS = {
+    bugday: { seed: 22, unit: 'kg', n: [8, 14], fuel: 5.5 }, arpa: { seed: 20, unit: 'kg', n: [6, 10], fuel: 5.5 },
+    nohut: { seed: 12, unit: 'kg', n: [2, 3], fuel: 5 }, mercimek: { seed: 10, unit: 'kg', n: [2, 3], fuel: 5 },
+    fig: { seed: 9, unit: 'kg', n: [0, 2], fuel: 4 }, kolza: { seed: 0.6, unit: 'kg', n: [12, 16], fuel: 6 },
+    aspir: { seed: 3.5, unit: 'kg', n: [6, 9], fuel: 5 }, aycicegi: { seed: 0.6, unit: 'kg', n: [6, 10], fuel: 6.5 },
+    misir: { seed: 2.8, unit: 'kg', n: [12, 22], fuel: 9 }, pancar: { seed: 1.2, unit: 'unit', n: [12, 18], fuel: 11 },
+    pamuk: { seed: 2.5, unit: 'kg', n: [10, 16], fuel: 10 }, patates: { seed: 280, unit: 'kg', n: [12, 18], fuel: 12 },
+    fasulye: { seed: 9, unit: 'kg', n: [3, 5], fuel: 7 }, nadas: { seed: 0, unit: 'kg', n: [0, 0], fuel: 3 }
+  };
+  var UREA_N = 0.46; // urea is 46 % N
+  // seq: crops of the plan. opts: { prev: crop|null, irrigation, credit: kg N/da a legume leaves for
+  // the next crop, area: da, prices: { fuel: ₺/L, urea: ₺/kg, seed: { id: ₺ per unit } } }.
+  // A missing price leaves that cost null (the amount is still given) and is listed in `missing`.
+  function recipe(seq, opts) {
+    var pr = opts.prices || {}, seedP = pr.seed || {}, area = opts.area || 1, missing = {};
+    var price = function (v) { return v == null || v === '' || isNaN(v) ? null : +v; };
+    var years = seq.map(function (c, k) {
+      var a = INPUTS[c.id], before = k ? seq[k - 1] : opts.prev;
+      var need = a.n[opts.irrigation ? 1 : 0];
+      var credit = before && before.g === 'baklagil' && c.id !== 'nadas' && c.g !== 'baklagil' ? Math.min(need, opts.credit || 0) : 0;
+      var nNet = need - credit, urea = nNet / UREA_N;
+      var ps = price(seedP[c.id]), pu = price(pr.urea), pf = price(pr.fuel);
+      if (a.seed && ps == null) missing['seed:' + c.id] = 1;
+      if (urea > 0 && pu == null) missing.urea = 1;
+      if (pf == null) missing.fuel = 1;
+      var cost = { seed: a.seed ? (ps == null ? null : a.seed * ps) : 0, urea: urea > 0 ? (pu == null ? null : urea * pu) : 0, fuel: pf == null ? null : a.fuel * pf };
+      var parts = [cost.seed, cost.urea, cost.fuel];
+      cost.total = parts.some(function (v) { return v == null; }) ? null : parts.reduce(function (s, v) { return s + v; }, 0);
+      return { id: c.id, seed: a.seed, unit: a.unit, nNeed: need, nCredit: credit, nNet: nNet, urea: urea, fuel: a.fuel, cost: cost };
+    });
+    var sum = function (f) { return years.reduce(function (s, y) { return s + f(y); }, 0); };
+    var perDa = years.every(function (y) { return y.cost.total != null; }) ? sum(function (y) { return y.cost.total; }) : null;
+    return { years: years, area: area, perDa: perDa, field: perDa == null ? null : perDa * area,
+      totals: { urea: sum(function (y) { return y.urea; }) * area, fuel: sum(function (y) { return y.fuel; }) * area, nCredit: sum(function (y) { return y.nCredit; }) * area },
+      // diesel and urea first, then seeds in plan order
+      missing: ['fuel', 'urea'].filter(function (k) { return missing[k]; }).concat(Object.keys(missing).filter(function (k) { return k !== 'fuel' && k !== 'urea'; })) };
+  }
+
   // ---------- Data checks (the "Veri kontrolleri" panel) ----------
   // Physical limits for POWER monthly values (°C, mm/day, 0-1, MJ/m²/day).
   var LIMITS = { T2M: [-45, 45], T2M_MAX: [-40, 55], T2M_MIN: [-60, 40], PRECTOTCORR: [0, 60], GWETROOT: [0, 1], GWETTOP: [0, 1], ALLSKY_SFC_SW_DWN: [0, 40] };
@@ -1396,7 +1468,7 @@ var FS = (function () {
       tempP: mean(PT), tempO: mean(OT), dT: mean(PT) - mean(OT), tempR: corr(PT, OT) };
   }
 
-  return { CROPS: CROPS, NADAS: NADAS, SALT: SALT, LIME: LIME, mannKendall: mannKendall, spi: spi, patterns: patterns, waterYearRain: waterYearRain, normCdf: normCdf, normInv: normInv, gammaP: gammaP, applyDailyMeans: applyDailyMeans, ndviQA: ndviQA, dataChecks: dataChecks, parseOpenMeteo: parseOpenMeteo, compareSources: compareSources, trap: trap, ramp: ramp, seasonStats: seasonStats, POWER_PARAMS: POWER_PARAMS, MD: MD, parsePower: parsePower, climatology: climatology, shiftClim: shiftClim, annual: annual, suit: suit, plan: plan, parseMonth: parseMonth, scheduleRotation: scheduleRotation, checkRotation: checkRotation, findSingleChange: findSingleChange, driestCompleteYear: driestCompleteYear, LIMTXT: LIMTXT, LIMFARM: LIMFARM, GROUP: GROUP, FAMTR: FAMTR, LIMTXT_EN: LIMTXT_EN, LIMFARM_EN: LIMFARM_EN, GROUP_EN: GROUP_EN, FAMEN: FAMEN, setLang: setLang, ndviSummary: ndviSummary, synthPower: synthPower, mean: mean, slope: slope };
+  return { CROPS: CROPS, NADAS: NADAS, SALT: SALT, LIME: LIME, mannKendall: mannKendall, spi: spi, patterns: patterns, waterYearRain: waterYearRain, normCdf: normCdf, normInv: normInv, gammaP: gammaP, applyDailyMeans: applyDailyMeans, ndviQA: ndviQA, dataChecks: dataChecks, INPUTS: INPUTS, recipe: recipe, parseOpenMeteo: parseOpenMeteo, compareSources: compareSources, trap: trap, ramp: ramp, seasonStats: seasonStats, POWER_PARAMS: POWER_PARAMS, MD: MD, parsePower: parsePower, climatology: climatology, shiftClim: shiftClim, annual: annual, suit: suit, plan: plan, parseMonth: parseMonth, scheduleRotation: scheduleRotation, checkRotation: checkRotation, findSingleChange: findSingleChange, driestCompleteYear: driestCompleteYear, LIMTXT: LIMTXT, LIMFARM: LIMFARM, GROUP: GROUP, FAMTR: FAMTR, LIMTXT_EN: LIMTXT_EN, LIMFARM_EN: LIMFARM_EN, GROUP_EN: GROUP_EN, FAMEN: FAMEN, setLang: setLang, ndviSummary: ndviSummary, synthPower: synthPower, mean: mean, slope: slope };
 })();
 
 
@@ -1404,7 +1476,7 @@ var FS = (function () {
 <script>
 {
 const $ = id => document.getElementById(id);
-const S = { data: null, an: null, base: null, rec: null, ndvi: [], soil: { ph: null, clay: null }, soilSat: null, inc: {}, demo: false, goal: 'denge', lab: { lime: null, ec: null } };
+const S = { data: null, an: null, base: null, rec: null, ndvi: [], soil: { ph: null, clay: null }, soilSat: null, inc: {}, seedPrice: {}, demo: false, goal: 'denge', lab: { lime: null, ec: null } };
 // ---------- Language (Turkish / English) ----------
 // Order: ?lang= in the address, then the saved choice, then Turkish. Static page text is translated
 // from the I18N table below (keyed by the Turkish text); text the script writes uses T(tr, en).
@@ -1598,6 +1670,26 @@ const I18N = {
   "Ürün eşikleri tablosu": "Crop threshold table",
   "Dil": "Language",
   "Veri kontrolleri": "Data checks",
+  "Girdi fiyatlarım (reçete)": "My input prices (recipe)",
+  "Fiyatları gir; ARGIS plandaki her yıl için tohum, gübre ve mazot miktarını ve maliyetini hesaplar. Gübre fiyatı yukarıdaki “Üre fiyatı” kutusundan alınır.": "Enter prices; ARGIS works out the seed, fertilizer and diesel amounts and their cost for each year of the plan. The fertilizer price comes from the “Urea price” box above.",
+  "Mazot (motorin) fiyatı (₺/L)": "Diesel price (₺/L)",
+  "Plandaki ürünlerin tohum fiyatı:": "Seed prices for the crops in the plan:",
+  "Girdi reçetesi": "Input recipe",
+  "Girdi reçetesi tablosu": "Input recipe table",
+  "Yıl": "Year",
+  "Tohum": "Seed",
+  "Azot (N)": "Nitrogen (N)",
+  "Üre": "Urea",
+  "Mazot": "Diesel",
+  "Maliyet (₺/da)": "Cost (₺/da)",
+  "Tarlanın tamamı (₺)": "Whole field (₺)",
+  "Miktarlar yaklaşık tipik değerlerdir (prototip); il tarım müdürlüğü, tohum bayisi ya da toprak analizi önerisine göre değişir. Bakliyattan sonraki ürünün azot ihtiyacından “Azot kredisi” aralığının ortası düşülür. Fosfor ve potas, sulama pompası yakıtı, ilaç ve işçilik dahil değildir.": "Amounts are approximate typical values (prototype); they vary with advice from the provincial agriculture directorate, the seed dealer or a soil test. For a crop after a legume, the middle of the “Nitrogen credit” range is taken off its nitrogen need. Phosphorus and potash, irrigation pump fuel, crop protection and labour are not included.",
+  "Varsayılan miktarlar (tüm ürünler)": "Default amounts (all crops)",
+  "Varsayılan girdi miktarları tablosu": "Default input amounts table",
+  "Tohum / da": "Seed / da",
+  "Azot, kıraç (kg N/da)": "Nitrogen, rainfed (kg N/da)",
+  "Azot, sulu (kg N/da)": "Nitrogen, irrigated (kg N/da)",
+  "Mazot (L/da)": "Diesel (L/da)",
   "İkinci kaynak: ERA5 yeniden analizi (Open-Meteo arşivi, ~25 km ızgara). NASA POWER ~50 km ızgaradır; iki kaynak arasında küçük farklar olağandır. Kontroller her hesapta yeniden yapılır.": "Second source: ERA5 reanalysis (Open-Meteo archive, ~25 km grid). NASA POWER is a ~50 km grid, so small differences between the two are normal. The checks run again with every calculation."
 };
 const srcText = new WeakMap(), srcAttr = new WeakMap(), norm = s => s.replace(/\s+/g, ' ').trim();
@@ -1796,7 +1888,7 @@ $('hot').addEventListener('change', () => {
 });
 ['pW', 'pS', 'pI', 'dT', 'dP'].forEach(id => $(id).addEventListener('input', () => { setGoal(null); sl(); if (S.data) compute('slider'); }));
 document.querySelectorAll('.goal').forEach(b => b.addEventListener('click', () => { setGoal(b.dataset.goal); sl(); if (S.data) compute(); }));
-['prev', 'next', 'years', 'irr', 'kirac', 'soilType', 'ph', 'clay', 'lime', 'ec', 'area', 'urea', 'baseMode', 'nLo', 'nHi', ...planningIds, ...cycleIds, ...checkIds].forEach(id => $(id).addEventListener('change', () => {
+['prev', 'next', 'years', 'irr', 'kirac', 'soilType', 'ph', 'clay', 'lime', 'ec', 'area', 'urea', 'fuel', 'baseMode', 'nLo', 'nHi', ...planningIds, ...cycleIds, ...checkIds].forEach(id => $(id).addEventListener('change', () => {
   if (id === 'lime' || id === 'ec') S.lab[id] = $(id).value === '' ? null : Math.max(0, +$(id).value);
   if (id === 'ph' || id === 'clay') { S.soil.ph = $('ph').value === '' ? null : +$('ph').value; S.soil.clay = $('clay').value === '' ? null : +$('clay').value; const o = $('soilType').querySelector('[value=ozel]'); o.hidden = false; $('soilType').value = 'ozel'; }
   if (id === 'soilType') applySoil();
@@ -1807,7 +1899,7 @@ setGoal('denge'); sl();
 
 // ---------- Undo and reset ----------
 // Every user-made change that alters the plan offers "Geri al"; "Varsayılanlara dön" appears when settings differ from the defaults.
-const CTRL_IDS = ['prev', 'next', 'years', 'soilType', 'area', 'urea', 'ph', 'clay', 'lime', 'ec', 'pW', 'pS', 'pI', 'dT', 'dP', 'baseMode', 'nLo', 'nHi', ...cycleIds, ...planningIds];
+const CTRL_IDS = ['prev', 'next', 'years', 'soilType', 'area', 'urea', 'fuel', 'ph', 'clay', 'lime', 'ec', 'pW', 'pS', 'pI', 'dT', 'dP', 'baseMode', 'nLo', 'nHi', ...cycleIds, ...planningIds];
 function snapshot() {
   return { v: Object.fromEntries(CTRL_IDS.map(id => [id, $(id).value])), irr: $('irr').checked, goal: S.goal,
     checks: checkIds.map(id => $(id).checked),
@@ -2025,7 +2117,7 @@ function renderThresholds() {
 renderThresholds();
 
 // ---------- Compute ----------
-const BANDS = ['planBand', 'sumBand', 'patternBand', 'shiftBand', 'suitBand', 'climBand', 'soilBand', 'checkBand'];
+const BANDS = ['planBand', 'recipeBand', 'sumBand', 'patternBand', 'shiftBand', 'suitBand', 'climBand', 'soilBand', 'checkBand'];
 function compute(scroll) {
   syncPlanningControls();
   const planning = readPlanning();
@@ -2075,6 +2167,7 @@ function compute(scroll) {
   const revised = renderSingleChange({ ...popt, suits: ss }, planning.error);
   renderDryYear(d, soil, popt, P.top[0], revised);
   renderImpact(P, ss, irr);
+  renderRecipe();
   renderSummary(P, ss, irr, drought);
   renderShiftLine(Pb, P, renderShift(Pb, P, sb, ss, irr, Boolean(dT || dP)), dT, dP);
   renderPatterns();
@@ -2286,6 +2379,63 @@ function renderImpact(P, ss, irr) {
     : stat(T('Bitki ailesi', 'Plant families'), T(`${new Set(top.seq.filter(c => c.id !== 'nadas').map(c => c.f)).size} farklı`, `${new Set(top.seq.filter(c => c.id !== 'nadas').map(c => c.f)).size} different`), T('Fiyat ve kuraklık riski dağılır', 'Spreads price and drought risk'), 'y');
   $('impCards').innerHTML = h;
 }
+
+// ---------- Input recipe (seed, fertilizer, diesel from the farmer's own prices) ----------
+const seedUnit = u => u === 'unit' ? T('ünite', 'unit') : 'kg';
+function renderSeedPrices(seq) {
+  const crops = [...new Map(seq.filter(c => c.id !== 'nadas').map(c => [c.id, c])).values()];
+  const key = LANG + ':' + crops.map(c => c.id).join(',');
+  if (S.seedKey === key) return;
+  S.seedKey = key;
+  $('seedPrices').innerHTML = crops.map(c => `<div class="field"><label for="seed-${c.id}">${T(`${c.n} tohumu`, `${c.n} seed`)} (₺/${seedUnit(FS.INPUTS[c.id].unit)})</label><input type="number" id="seed-${c.id}" data-seed="${c.id}" min="0" step="0.5" placeholder="${T('İsteğe bağlı', 'Optional')}" value="${S.seedPrice[c.id] ?? ''}"></div>`).join('');
+}
+$('seedPrices').addEventListener('change', e => {
+  const id = e.target.dataset.seed; if (!id) return;
+  S.seedPrice[id] = e.target.value === '' ? null : Math.max(0, +e.target.value);
+  renderRecipe();
+});
+function renderInputsTable() {
+  $('inputsT').querySelector('tbody').innerHTML = FS.CROPS.concat([FS.NADAS]).map(c => { const a = FS.INPUTS[c.id];
+    return `<tr><td><b>${c.n}</b></td><td class="n">${a.seed ? `${dec(a.seed)} ${seedUnit(a.unit)}` : '–'}</td><td class="n">${a.n[0]}</td><td class="n">${a.n[1]}</td><td class="n">${dec(a.fuel)}</td></tr>`; }).join('');
+}
+function renderRecipe() {
+  if (!S.last || !S.last.P.top[0]) { $('recipeBand').hidden = true; return; }
+  const top = S.last.P.top[0], irr = S.last.irr, n = top.seq.length;
+  renderSeedPrices(top.seq);
+  const all = FS.CROPS.concat([FS.NADAS]), prev = all.find(c => c.id === $('prev').value) || null;
+  const nLo = Math.max(0, +$('nLo').value || 0), nHi = Math.max(nLo, +$('nHi').value || 0);
+  const area = Math.max(1, +$('area').value || 1);
+  const num = id => $(id).value === '' ? null : +$(id).value;
+  const r = FS.recipe(top.seq, { prev, irrigation: irr, credit: (nLo + nHi) / 2, area, prices: { fuel: num('fuel'), urea: num('urea'), seed: S.seedPrice } });
+  const money = v => v == null ? '–' : `${fmtN(v)} ₺`, one = v => dec(fmt(v, 1));
+  const rows = r.years.map((y, k) => { const c = top.seq[k];
+    return `<tr><td data-l="${T('Yıl', 'Year')}">${T(`${k + 1}. yıl`, `Year ${k + 1}`)}</td><td data-l="${T('Ürün', 'Crop')}"><b>${c.n}</b></td>
+      <td class="n" data-l="${T('Tohum', 'Seed')}">${y.seed ? `${dec(y.seed)} ${seedUnit(y.unit)}/da` : '–'}</td>
+      <td class="n" data-l="${T('Azot (N)', 'Nitrogen (N)')}">${one(y.nNet)} kg/da${y.nCredit ? `<div class="sub">${T(`${y.nNeed} − ${one(y.nCredit)} bakliyat kredisi`, `${y.nNeed} − ${one(y.nCredit)} legume credit`)}</div>` : ''}</td>
+      <td class="n" data-l="${T('Üre', 'Urea')}">${y.urea ? `${one(y.urea)} kg/da` : '–'}</td>
+      <td class="n" data-l="${T('Mazot', 'Diesel')}">${one(y.fuel)} L/da</td>
+      <td class="n" data-l="${T('Maliyet (₺/da)', 'Cost (₺/da)')}">${money(y.cost.total)}</td>
+      <td class="n" data-l="${T('Tarlanın tamamı (₺)', 'Whole field (₺)')}">${money(y.cost.total == null ? null : y.cost.total * area)}</td></tr>`; });
+  rows.push(`<tr class="total"><td data-l="">${T('Toplam', 'Total')}</td><td data-l=""></td><td data-l=""></td><td data-l=""></td>
+    <td class="n" data-l="${T('Üre', 'Urea')}">${fmtN(r.totals.urea)} kg</td><td class="n" data-l="${T('Mazot', 'Diesel')}">${fmtN(r.totals.fuel)} L</td>
+    <td class="n" data-l="${T('Maliyet (₺/da)', 'Cost (₺/da)')}">${money(r.perDa)}</td><td class="n" data-l="${T('Tarlanın tamamı (₺)', 'Whole field (₺)')}">${money(r.field)}</td></tr>`);
+  $('recipeT').querySelector('tbody').innerHTML = rows.join('');
+  const name = m => m === 'fuel' ? T('mazot', 'diesel') : m === 'urea' ? T('üre', 'urea') : T(`${all.find(c => c.id === m.slice(5)).n.toLowerCase()} tohumu`, `${all.find(c => c.id === m.slice(5)).n.toLowerCase()} seed`);
+  $('recipeTitle').textContent = r.field != null
+    ? T(`${n} yıllık planın girdi maliyeti: ${fmtN(r.field)} ₺ (${area} dekar)`, `Input cost of the ${n}-year plan: ${fmtN(r.field)} ₺ (${area} decares)`)
+    : T(`${n} yıllık plan için girdi reçetesi`, `Input recipe for the ${n}-year plan`);
+  $('recipeTitle').dataset.k = 'recipe';
+  const amounts = T(`Tarlanın tamamı için ${n} yılda: ${fmtN(r.totals.urea)} kg üre, ${fmtN(r.totals.fuel)} L mazot.`, `For the whole field over ${n} years: ${fmtN(r.totals.urea)} kg urea, ${fmtN(r.totals.fuel)} L diesel.`)
+    + (r.totals.nCredit ? T(` Bakliyat ${fmtN(r.totals.nCredit)} kg azot kazandırıyor.`, ` Legumes save ${fmtN(r.totals.nCredit)} kg of nitrogen.`) : '');
+  $('recipeLead').innerHTML = (r.perDa != null
+    ? T(`Dekar başına ${fmtN(r.perDa)} ₺, yılda ortalama ${fmtN(r.field / n)} ₺. `, `${fmtN(r.perDa)} ₺ per decare, ${fmtN(r.field / n)} ₺ a year on average. `)
+    : T(`Maliyeti görmek için şu fiyatları gir: <b>${r.missing.map(name).join(', ')}</b>. `, `To see the cost, enter these prices: <b>${r.missing.map(name).join(', ')}</b>. `)
+      + `<button type="button" class="linkbtn" id="recipeEnter">${T('Fiyatları gir', 'Enter prices')}</button> `)
+    + amounts;
+  const enter = $('recipeEnter');
+  if (enter) enter.addEventListener('click', () => { $('costBox').open = true; const empty = [...$('costBox').querySelectorAll('input')].find(i => i.value === '') || $('fuel'); empty.focus(); empty.scrollIntoView({ block: 'center' }); });
+}
+renderInputsTable();
 
 // ---------- Climate patterns (historical NASA POWER; not affected by the scenario sliders) ----------
 const signTr = v => (v > 0 ? '+' : v < 0 ? '−' : '') + dec(Math.abs(v));
@@ -2736,7 +2886,7 @@ function setLang(l, redraw) {
   try { localStorage.setItem('fs-lang', l); } catch (e) {}
   translateDom();
   if (!redraw) return;
-  fillCropSelects(); renderThresholds(); soilAutoLabel(); sl(); setLayers();
+  fillCropSelects(); renderThresholds(); renderInputsTable(); soilAutoLabel(); sl(); setLayers();
   if ($('fieldEvidenceRows').children.length) renderFieldEvidence();
   if (!busy) { $('go').innerHTML = goLabel(); $('geo').innerHTML = geoLabel(); }
   if (parcelAt && !$('parcel').hidden) lookupParcel(...parcelAt);

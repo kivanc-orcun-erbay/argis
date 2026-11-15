@@ -363,3 +363,29 @@ test('parseOpenMeteo + compareSources: yearly totals, percent difference, full y
   near(c.dT, 1, 0.1);          // month-weighted (POWER) vs day-weighted mean: short February shifts it a little
   assert.equal(F.compareSources(d, {}, 2016, 2025).n, 0);
 });
+
+test('recipe: amounts per year, legume nitrogen credit, costs only when every price is given', () => {
+  const by = id => F.CROPS.concat([F.NADAS]).find(c => c.id === id);
+  const seq = ['nohut', 'bugday', 'nadas'].map(by);
+  const r = F.recipe(seq, { prev: by('bugday'), irrigation: false, credit: 4, area: 10,
+    prices: { fuel: 50, urea: 20, seed: { nohut: 60, bugday: 15 } } });
+  const [ch, wh, fa] = r.years;
+  assert.equal(ch.nCredit, 0);                  // chickpea after wheat: no credit
+  assert.equal(wh.nNeed, 8); assert.equal(wh.nCredit, 4); assert.equal(wh.nNet, 4); // wheat after chickpea
+  near(wh.urea, 4 / 0.46);
+  near(ch.cost.total, 12 * 60 + (2 / 0.46) * 20 + 5 * 50);
+  near(wh.cost.total, 22 * 15 + (4 / 0.46) * 20 + 5.5 * 50);
+  assert.equal(fa.cost.total, 3 * 50);          // fallow: only diesel
+  near(r.perDa, ch.cost.total + wh.cost.total + fa.cost.total);
+  near(r.field, r.perDa * 10);
+  near(r.totals.fuel, (5 + 5.5 + 3) * 10);
+  assert.deepEqual([...r.missing], []);
+  // Irrigated: higher nitrogen need. Missing prices: amounts stay, totals become null and are listed.
+  const q = F.recipe(seq, { prev: null, irrigation: true, credit: 4, area: 10, prices: { fuel: 50 } });
+  assert.equal(q.years[1].nNeed, 14);
+  assert.equal(q.perDa, null); assert.equal(q.field, null);
+  assert.deepEqual([...q.missing].sort(), ['seed:bugday', 'seed:nohut', 'urea']);
+  assert.equal(q.years[2].cost.total, 150);
+  // Every crop has amounts.
+  F.CROPS.forEach(c => assert.ok(F.INPUTS[c.id], c.id));
+});

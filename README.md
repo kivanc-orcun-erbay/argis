@@ -18,6 +18,8 @@ Sayfa Türkçe ve İngilizcedir: sağ üstteki **TR / EN** düğmesiyle dil değ
 
 **Mühendis → Plan kısıtları ve kurak yıl** bölümünde başlangıç ayı, ilk hasat için son ay ve sulu tarlada sezonluk net sulama kotası seçilebilir. Nadas takvimde 12 ay sürer. Kota ve hasat sınırı puanlamadan önce uygulanır. Kurak yıl seçeneği, öneriyi seçilen tarlanın kayıtlardaki en düşük yağışlı tam iklim yılıyla sınar. **Yöntem** altında Konya nohut ve Haymana buğday denemelerinin saha sonuçları Argis hesaplarıyla gösterilir.
 
+**Girdi reçetesi**: Panelde “Girdi fiyatlarım” kutusuna mazot fiyatı ve plandaki ürünlerin tohum fiyatı girilir (gübre için “Üre fiyatı” kullanılır). ARGIS planın her yılı için dekar başına tohum, azot / üre ve mazot miktarını, bakliyat sonrası azot kredisini düşerek hesaplar; fiyatlar girilince yıllık ve tarlanın tamamı için maliyeti verir. Miktarlar yaklaşık tipik değerlerdir (prototip) ve mühendis görünümünde tablo olarak gösterilir.
+
 **Veri kontrolleri** bölümü her hesapta planın dayandığı veriyi denetler: güncellik, eksik değer, fiziksel sınırlar, ani sıçramalar, günlük sıcaklık, MODIS ve toprak verisinin varlığı. NASA POWER yağış ve sıcaklığı ikinci bir kaynakla (ERA5, Open-Meteo arşivi) karşılaştırılır; yağış farkı %25'i ya da sıcaklık farkı 2 °C'yi aşarsa uyarı verilir. Konya için POWER yağışı ERA5'ten belirgin biçimde yüksektir (2016–2025: yılda 515 / 307 mm).
 
 ## Kontrol
