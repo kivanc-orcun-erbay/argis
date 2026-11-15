@@ -774,7 +774,7 @@ td .sub{font-size:var(--f-xs);color:var(--ink-3)}
   <div class="privacy">
     <div class="card"><h3>Hesap senin cihazında yapılır</h3><p>ARGIS’in sunucusu, veritabanı ve kullanıcı hesabı yoktur. Plan, reçete ve bütün hesaplar tarayıcında yapılır. Girdiklerini biz görmeyiz ve saklamayız; sayfayı kapatınca silinirler.</p></div>
     <div class="card"><h3>Toprak analizi ve fiyatlar cihazından çıkmaz</h3><p>pH, kil, kireç ve tuzluluk değerlerin; üre, mazot ve tohum fiyatların; alan, mevcut planın ve kazanç puanların hiçbir yere gönderilmez.</p></div>
-    <div class="card"><h3>Konum yalnızca veri almak için gönderilir</h3><p>“Münavebe planımı çıkar”a bastığında tarlanın koordinatı (yaklaşık 10 m hassasiyetle) aşağıdaki veri servislerine gönderilir; bu servisler o noktanın iklim, toprak ve uydu verisini döndürür. Koordinat bir ad, telefon numarası ya da hesapla birlikte gönderilmez. Haritaya dokunmak tek başına koordinat göndermez.</p></div>
+    <div class="card"><h3>Konum yalnızca veri almak için gönderilir</h3><p>“Münavebe planımı çıkar”a bastığında tarlanın koordinatı (yaklaşık 100 m’ye yuvarlanarak) aşağıdaki veri servislerine gönderilir; bu servisler o noktanın iklim, toprak ve uydu verisini döndürür. Koordinat bir ad, telefon numarası ya da hesapla birlikte gönderilmez. Haritaya dokunmak tek başına koordinat göndermez.</p></div>
     <div class="card"><h3>“Konumumu bul”</h3><p>Tarayıcın önce izin ister. Bulunan konum yalnızca enlem ve boylam kutularını doldurmak için kullanılır ve saklanmaz.</p></div>
   </div>
   <div class="prose">
@@ -1720,7 +1720,7 @@ const I18N = {
   "Toprak analizi ve fiyatlar cihazından çıkmaz": "Soil test and prices stay on your device",
   "pH, kil, kireç ve tuzluluk değerlerin; üre, mazot ve tohum fiyatların; alan, mevcut planın ve kazanç puanların hiçbir yere gönderilmez.": "Your pH, clay, lime and salinity values; urea, diesel and seed prices; area, current plan and earnings scores are not sent anywhere.",
   "Konum yalnızca veri almak için gönderilir": "The location is sent only to fetch data",
-  "“Münavebe planımı çıkar”a bastığında tarlanın koordinatı (yaklaşık 10 m hassasiyetle) aşağıdaki veri servislerine gönderilir; bu servisler o noktanın iklim, toprak ve uydu verisini döndürür. Koordinat bir ad, telefon numarası ya da hesapla birlikte gönderilmez. Haritaya dokunmak tek başına koordinat göndermez.": "When you press “Make my rotation plan”, the field’s coordinates (to about 10 m) are sent to the data services below, which return the climate, soil and satellite data for that point. The coordinates are not sent with a name, phone number or account. Tapping the map alone sends no coordinates.",
+  "“Münavebe planımı çıkar”a bastığında tarlanın koordinatı (yaklaşık 100 m’ye yuvarlanarak) aşağıdaki veri servislerine gönderilir; bu servisler o noktanın iklim, toprak ve uydu verisini döndürür. Koordinat bir ad, telefon numarası ya da hesapla birlikte gönderilmez. Haritaya dokunmak tek başına koordinat göndermez.": "When you press “Make my rotation plan”, the field’s coordinates (rounded to about 100 m) are sent to the data services below, which return the climate, soil and satellite data for that point. The coordinates are not sent with a name, phone number or account. Tapping the map alone sends no coordinates.",
   "“Konumumu bul”": "“Find my location”",
   "Tarayıcın önce izin ister. Bulunan konum yalnızca enlem ve boylam kutularını doldurmak için kullanılır ve saklanmaz.": "Your browser asks for permission first. The position found only fills in the latitude and longitude boxes and is not kept.",
   "Üçüncü taraflara ne gider?": "What goes to third parties?",
@@ -2017,7 +2017,12 @@ async function fetchT(url, opts = {}, ms = 25000) {
   finally { clearTimeout(t); }
 }
 const applyDailyMeans = FS.applyDailyMeans, ndviQA = FS.ndviQA;  // pure helpers live in the FS model block (unit-tested)
+// Coordinates leave the page rounded to 3 decimals: 0.001° is about 111 m north–south and ~90 m
+// east–west in Turkey. The finest service used, SoilGrids and MODIS, has 250 m cells, so results
+// do not depend on finer detail, and the exact spot of a field is not sent.
+const coarse = v => (+v).toFixed(3);
 async function getPower(lat, lon) {
+  lat = coarse(lat); lon = coarse(lon);
   const endY = new Date().getFullYear() - 1;
   const url = `https://power.larc.nasa.gov/api/temporal/monthly/point?parameters=${FS.POWER_PARAMS.join(',')}&community=AG&longitude=${lon}&latitude=${lat}&start=2001&end=${endY}&format=JSON`;
   // POWER's monthly T2M_MAX / T2M_MIN are the month's extremes; crop limits assume average daily highs/lows.
@@ -2032,6 +2037,7 @@ async function getPower(lat, lon) {
   return j;
 }
 async function getSoil(lat, lon) {
+  lat = coarse(lat); lon = coarse(lon);
   const url = `https://rest.isric.org/soilgrids/v2.0/properties/query?lon=${lon}&lat=${lat}&property=phh2o&property=clay&property=soc&depth=0-5cm&depth=5-15cm&depth=15-30cm&value=mean`;
   const r = await fetchT(url, {}, 60000); if (!r.ok) throw new Error('SoilGrids ' + r.status);
   const j = await r.json(), o = {};
@@ -2039,6 +2045,7 @@ async function getSoil(lat, lon) {
   return { ph: o.phh2o, clay: o.clay, soc: o.soc };
 }
 async function getNdvi(lat, lon, signal) {
+  lat = coarse(lat); lon = coarse(lon);
   const base = 'https://modis.ornl.gov/rst/api/v1/MOD13Q1';
   const h = { headers: { Accept: 'application/json' }, signal };
   const dr = await fetchT(`${base}/dates?latitude=${lat}&longitude=${lon}`, h, 90000); if (!dr.ok) throw new Error('MODIS ' + dr.status); const dj = await dr.json();
@@ -2731,7 +2738,7 @@ $('csv').addEventListener('click', () => {
 const secondCache = new Map();
 function ensureSecond() {
   if (!S.loc) { S.second = { state: 'na' }; return; }
-  const [la, lo] = S.loc, y0 = S.rec.y0, y1 = S.rec.y1, key = `${(+la).toFixed(2)},${(+lo).toFixed(2)},${y0}-${y1}`;
+  const [la, lo] = S.loc.map(coarse), y0 = S.rec.y0, y1 = S.rec.y1, key = `${(+la).toFixed(2)},${(+lo).toFixed(2)},${y0}-${y1}`;
   if (S.second && S.second.key === key) return;
   if (secondCache.has(key)) { S.second = { key, state: 'ok', om: secondCache.get(key) }; return; }
   S.second = { key, state: 'pending' };

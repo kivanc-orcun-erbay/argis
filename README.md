@@ -22,7 +22,7 @@ Sayfa Türkçe ve İngilizcedir: sağ üstteki **TR / EN** düğmesiyle dil değ
 
 **Veri kontrolleri** bölümü her hesapta planın dayandığı veriyi denetler: güncellik, eksik değer, fiziksel sınırlar, ani sıçramalar, günlük sıcaklık, MODIS ve toprak verisinin varlığı. NASA POWER yağış ve sıcaklığı ikinci bir kaynakla (ERA5, Open-Meteo arşivi) karşılaştırılır; yağış farkı %25'i ya da sıcaklık farkı 2 °C'yi aşarsa uyarı verilir. Konya için POWER yağışı ERA5'ten belirgin biçimde yüksektir (2016–2025: yılda 515 / 307 mm).
 
-**Gizlilik**: Sayfanın sunucusu, veritabanı ve kullanıcı hesabı yoktur; hesaplar tarayıcıda yapılır. Toprak analizi değerleri, fiyatlar, alan ve mevcut plan hiçbir yere gönderilmez. Tarlanın koordinatı yalnızca “Münavebe planımı çıkar” ile NASA POWER, ISRIC SoilGrids ve ORNL DAAC'a, veri kontrolleri için Open-Meteo'ya gider. Tarayıcıda yalnızca dil ve görünüm tercihi saklanır; çerez ve ziyaretçi analizi yoktur. Ayrıntılar sayfanın “Gizlilik” bölümündedir; `tests/browser/privacy.spec.cjs` bu söylenenleri ağ isteklerini izleyerek sınar.
+**Gizlilik**: Sayfanın sunucusu, veritabanı ve kullanıcı hesabı yoktur; hesaplar tarayıcıda yapılır. Toprak analizi değerleri, fiyatlar, alan ve mevcut plan hiçbir yere gönderilmez. Tarlanın koordinatı, yaklaşık 100 m’ye yuvarlanarak, yalnızca “Münavebe planımı çıkar” ile NASA POWER, ISRIC SoilGrids ve ORNL DAAC'a, veri kontrolleri için Open-Meteo'ya gider. Tarayıcıda yalnızca dil ve görünüm tercihi saklanır; çerez ve ziyaretçi analizi yoktur. Ayrıntılar sayfanın “Gizlilik” bölümündedir; `tests/browser/privacy.spec.cjs` bu söylenenleri ağ isteklerini izleyerek sınar.
 
 ## Kontrol
 

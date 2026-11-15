@@ -54,3 +54,18 @@ test('tapping the map sends no coordinates', async ({ page }) => {
   await page.waitForTimeout(500);
   expect(seen.filter(s => s.includes(lat) || /power\.larc|isric|modis\.ornl|open-meteo/.test(s))).toEqual([]);
 });
+
+test('coordinates leave the page rounded to 3 decimals (~100 m), never at full precision', async ({ page }) => {
+  await open(page);
+  const seen = recordRequests(page);
+  await page.locator('#vEng').click();
+  await page.fill('#lat', '38.7346'); await page.fill('#lon', '33.4079');
+  await page.locator('#go').click();
+  await expect(page.locator('#status')).toContainText('Plan hazır');
+  await expect(page.locator('#checks li[data-chk="second"]')).not.toHaveAttribute('data-state', /^$/);
+  await page.waitForTimeout(500);
+  const data = seen.filter(s => /power\.larc|isric|modis\.ornl|open-meteo/.test(s));
+  for (const host of ['power.larc', 'isric', 'modis.ornl', 'open-meteo']) expect(data.some(s => s.includes(host)), host).toBe(true);
+  expect(data.filter(s => s.includes('38.7346') || s.includes('33.4079'))).toEqual([]);
+  expect(data.every(s => s.includes('38.735') && s.includes('33.408'))).toBe(true);
+});
